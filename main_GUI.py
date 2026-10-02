@@ -11,18 +11,6 @@ def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"
     page.scroll = ft.ScrollMode.AUTO
 
-    # ページ切り替え処理
-    def route_change(route):
-        page.views.clear()
-        if page.route == "/":
-            page.views.append(main_view())
-        elif page.route == "/evolution":
-            page.views.append(evolution_view())
-        page.update()
-
-    page.on_route_change = route_change
-    page.go("/")
-
     # メインビュー（初期条件＋収束）
     def main_view():
         inputs = {
@@ -36,35 +24,61 @@ def main(page: ft.Page):
         }
 
         result_text = ft.Text()
-        graph_image = ft.Image(visible=False, width=page.window.width - 200)
+        graph_image = ft.Image(src = "", visible=False, width=page.width - 200)
 
         # 登録物質と物性値（ABSのa, n は仮値）
-        materials = {
-            "PMMA": {"密度": 1190, "a": 0.000131, "n": 0.34},
-            "ABS": {"密度": 1040, "a": 0.90, "n": 1.1},
-        }
+        materials = [
+            {"name": "MMA", "rho": 1190, "a": 0.000131, "n": 0.34},
+            {"name": "ABS", "rho": 1040, "a": 0.90, "n": 1.1}
+        ]
+
+        # Dropdown の options
+        def on_material_change():
+            options = []
+            for material in materials:
+                options.append(
+                    ft.DropdownOption(
+                        key = material["name"],
+                        content = ft.Text(value = material["name"]),
+                    )
+            )
+            return options
 
         # 表示用テキスト群
-        density_text = ft.Text(value="密度: -", size=16)
-        a_text = ft.Text(value="a: -", size=16)
-        n_text = ft.Text(value="n: -", size=16)
+        density_text = ft.Text()
+        a_text = ft.Text()
+        n_text = ft.Text()
 
-        def on_material_change(e):
-            name = e.control.value
-            props = materials.get(name, {})
-            density_text.value = f"密度: {props.get('密度', '-')} kg/m³"
-            a_text.value = f"a: {props.get('a', '-')}"
-            n_text.value = f"n: {props.get('n', '-')}"
-            page.session.set(
-                "material_properties", props
-            )  # RocketSimulation側に渡す準備
-            page.update()
-
+        def rho_select(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value= f"a: {selected_properties['a']}"
+            n_text.value= f"n: {selected_properties['n']}"
+        
+        def rho_change(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value= f"a: {selected_properties['a']}"
+            n_text.value= f"n: {selected_properties['n']}"
+        # Dropdown 本体
         material_dropdown = ft.Dropdown(
-            label="固体燃料を選択",
-            options=[ft.dropdown.Option(name) for name in materials.keys()],
-            on_change=on_material_change,
+            key = "material select",
+            options = on_material_change(),
             width=250,
+            on_select = rho_select,
+            on_text_change = rho_change,
         )
 
         property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
@@ -85,54 +99,76 @@ def main(page: ft.Page):
                 density_output.value = "⚠️ 数値で入力してください"
             page.update()
 
-        pressure_input.on_change = on_pressure_change
+        pressure_input.on_change = on_pressure_change # 挙動変更の可能性あり
 
         def run_simulation(e):
             try:
-                values = {k: float(inputs[k].value) for k in inputs}
-                print(values)
-                # 追加項目の取得と格納
-                # 酸化剤密度（補完済みテキストから抽出）
-                rho_ox = float(
+                # --- TextField から数値を取得 ---
+                F_req      = float(inputs["F_req"].value)
+                Pc_def     = float(inputs["Pc_def"].value)
+                OF_def     = float(inputs["OF_def"].value)
+                mdot_new   = float(inputs["mdot_new"].value)
+                Df_init    = float(inputs["Df_init"].value)
+                eta_cstar  = float(inputs["eta_cstar"].value)
+                eta_nozzle = float(inputs["eta_nozzle"].value)
+
+                # --- 酸化剤密度（density_output のテキストから抽出） ---
+                rho_ox_init = float(
                     density_output.value.split(":")[-1].replace("kg/m³", "").strip()
                 )
-                # 燃料密度・定数a,n（Dropdown選択から取得）
-                material_props = page.session.get("material_properties")
-                rho_fuel = float(material_props["密度"])
-                a = float(material_props["a"])
-                n = float(material_props["n"])
 
-                values["Ptank_init"] = float(pressure_input.value)
-                values["rho_ox_init"] = rho_ox
-                values["rho_f_start"] = rho_fuel
+                # --- タンク初期圧力 ---
+                Ptank_init = float(pressure_input.value)
 
-                material_props = page.session.get("material_properties")
-                values["a_ox"] = a
-                values["n_ox"] = n
-                print(values)
+                # --- Dropdown から材料名を取得 ---
+                fuel_material = material_dropdown.value   # "MMA" or "ABS"
 
-            except ValueError:
-                result_text.value = "⚠️ 全ての値を数値で入力してください"
+                # --- 材料データを取得 ---
+                for m in materials:
+                    if m["name"] == fuel_material:
+                        props = m
+                rho_f_start = float(props["rho"])
+                a_ox        = float(props["a"])
+                n_ox        = float(props["n"])
+
+            except Exception as ex:
+                result_text.value = f"⚠️ 入力エラー: {ex}"
                 page.update()
                 return
 
+            print("input definition done. start calculation")
+
             sim = RocketSimulation()
-            output, Dovalue, cdvalue = sim.initial_convergence(**values)
+            output, Dovalue, cdvalue = sim.initial_convergence(
+                F_req,
+                Pc_def,
+                OF_def,
+                mdot_new,
+                Df_init,
+                eta_cstar,
+                eta_nozzle,
+                Ptank_init,
+                rho_ox_init,
+                rho_f_start,
+                a_ox,
+                n_ox,
+                fuel_material
+            )
+            # --- 結果表示 ---
             result_text.value = output
 
-            graph_image.src_base64 = sim.get_iteration_plot_base64(Dovalue, cdvalue)
+            graph_image.src = sim.get_iteration_plot_base64(Dovalue, cdvalue)
             graph_image.visible = True
 
-            page.session.set("initial_conditions", values)  # 初期条件保存
-            page.session.set("initial_results", output)     # 出力保存
             page.update()
 
         # 実行ボタンと遷移ボタンを並べる
         action_row = ft.Row(
             [
-                ft.ElevatedButton("収束計算", on_click=run_simulation),
+                ft.Button("収束計算", on_click=run_simulation),
                 ft.TextButton(
-                    "▶ 時間発展ページへ", on_click=lambda _: page.go("/evolution")
+                    "▶ 時間発展ページへ",
+                    on_click=lambda _: (setattr(page, "route", "/evolution"), page.update())
                 ),
             ]
         )
@@ -148,18 +184,18 @@ def main(page: ft.Page):
                     result_text],
             spacing=10,
             expand=True,
-            height=page.window.height + 100,
+            height=page.height + 100,
             scroll=ft.ScrollMode.AUTO,
         )
 
         # 右側：収束グラフと K* グラフを縦に並べる
-        graph_image = ft.Image(visible=False)
+        graph_image = ft.Image(src = "", visible=False, width=page.width - 200)
 
         graph_column = ft.Column(
             controls=[graph_image],
             spacing=10,
             expand=True,
-            height=page.window.height + 100,
+            height=page.height + 100,
             scroll=ft.ScrollMode.AUTO,
             alignment=ft.MainAxisAlignment.START,
         )
@@ -447,6 +483,19 @@ def main(page: ft.Page):
                 ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/")),
             ],
         )
+    
+    # ページ切り替え処理
+    def route_change():
+        page.views.clear()
+        if page.route == "/":
+            page.views.append(main_view())
+        elif page.route == "/evolution":
+            page.views.append(evolution_view())
+        page.update()
+
+    page.on_route_change = route_change()
+    page.route = "/"
+    page.update()
 
 
-ft.app(target=main)
+ft.run(main)
