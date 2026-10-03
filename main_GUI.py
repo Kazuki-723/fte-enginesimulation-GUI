@@ -3,9 +3,17 @@ import csv
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 import re
+from datetime import datetime
 
 # 現在最新バージョンへの対応作業中
 # 動かす際は，旧バージョンのfletを使用するように 
+
+# 物性値のMaster
+# ABSのa,nは雑
+materials_mas = [
+    {"name": "MMA", "rho": 1190, "a": 0.000131, "n": 0.34},
+    {"name": "ABS", "rho": 1040, "a": 0.90, "n": 1.1}
+]
 
 def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"
@@ -26,11 +34,8 @@ def main(page: ft.Page):
         result_text = ft.Text()
         graph_image = ft.Image(src = "", visible=False, width=page.width - 200)
 
-        # 登録物質と物性値（ABSのa, n は仮値）
-        materials = [
-            {"name": "MMA", "rho": 1190, "a": 0.000131, "n": 0.34},
-            {"name": "ABS", "rho": 1040, "a": 0.90, "n": 1.1}
-        ]
+        # 物性値の参照
+        materials = materials_mas
 
         # Dropdown の options
         def on_material_change():
@@ -167,9 +172,6 @@ def main(page: ft.Page):
             page.session.store.set("OF_def", OF_def)
             page.session.store.set("Ptank_init", Ptank_init)
             page.session.store.set("rho_ox_init", rho_ox_init)
-            page.session.store.set("rho_f_start", rho_f_start)
-            page.session.store.set("a_ox", a_ox)
-            page.session.store.set("n_ox", n_ox)
             page.session.store.set("fuel_material", fuel_material)
 
             # resultデータのパーサー
@@ -196,7 +198,7 @@ def main(page: ft.Page):
                 if match_F:
                     result["F"] = float(match_F.group(1))
                 # Dt
-                match_Dt = re.search(r"Dt *= *([\d\.Ee+-]+)", text)
+                match_Dt = re.search(r"計算結果Dt *= *([\d\.Ee+-]+)", text)
                 if match_Dt:
                     result["Dt"] = float(match_Dt.group(1))
 
@@ -267,12 +269,6 @@ def main(page: ft.Page):
 
     # 時間発展ビュー（別ページ）
     def evolution_view():
-        # initial = page.session.get("initial_conditions")
-        # results = page.session.get("initial_results")  # K*, epsilon, Lf を含む
-        # if results != None:
-        #     results_parsed = parse_initial_results(results)
-
-
         results_graph_image = ft.Image(src= "", visible=False, width=600)
 
         # 初期値がある場合は値を埋める、なければ空欄
@@ -283,9 +279,6 @@ def main(page: ft.Page):
         OF_def = str(page.session.store.get("OF_def")) 
         Pt_init = str(page.session.store.get("Ptank_init")) 
         rho_ox = str(page.session.store.get("rho_ox_init")) 
-        rho_f = str(page.session.store.get("rho_f_start")) 
-        a_ox = str(page.session.store.get("a_ox")) 
-        n_ox = str(page.session.store.get("n_ox")) 
         fuel_material = str(page.session.store.get("fuel_material")) 
 
         Kstar = str(page.session.store.get("Kstar")) 
@@ -302,11 +295,8 @@ def main(page: ft.Page):
         eta_cstar_box = ft.TextField(label="C*効率", value=eta_cstar, width=150)
         eta_nozzle_box = ft.TextField(label="ノズル効率", value=eta_nozzle, width=150)
 
-        # 登録物質と物性値（ABSのa, n は仮値）
-        materials = [
-            {"name": "MMA", "rho": 1190, "a": 0.000131, "n": 0.34},
-            {"name": "ABS", "rho": 1040, "a": 0.90, "n": 1.1}
-        ]
+        # 物性値の参照
+        materials = materials_mas
 
         # Dropdown の options
         def on_material_change():
@@ -381,7 +371,7 @@ def main(page: ft.Page):
             on_click=lambda _: None,
         )
 
-        def get_csv_download_link(input_params, evolution_result):
+        def get_csv_download_link(input_params, performance_params, evolution_result):
             print("output")
 
             # ヘッダー行（evolution_resultの列順に対応）
@@ -400,7 +390,11 @@ def main(page: ft.Page):
                 "gamma [-]"
             ]
 
-            filename = f"result.csv"
+            # 現在時刻をファイル名に付与
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"result_{timestamp}.csv"
+
+            # csv保存
             with open(filename, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file, quoting=csv.QUOTE_NONE)
                 # 入力パラメータの書き出し
@@ -415,6 +409,17 @@ def main(page: ft.Page):
 
 
                 writer.writerow([])  # 空行
+                writer.writerow(["# performance params."])
+                for i in range(0, len(performance_params), 3):
+                    row = []
+                    for j in range(3):
+                        if i + j < len(performance_params):
+                            key, val = performance_params[i + j]
+                            row.extend([key, val])
+                    writer.writerow(row)
+
+                writer.writerow([])  # 空行
+
                 writer.writerow(["# evolution params."])
                 writer.writerow(evolution_headers)
                 writer.writerows(evolution_result)
@@ -450,8 +455,13 @@ def main(page: ft.Page):
                 n_ox  = float(props["n"])
                 cea_interval = float(cea_input.value)
 
+            except Exception as ex:
+                evolution_output.value = f"⚠️ 入力エラー: {ex}"
+                page.update()
+                return
 
 
+            try:
                 # RocketSimulation呼び出し
                 (
                     time_ms,
@@ -463,6 +473,8 @@ def main(page: ft.Page):
                     Pt_arr,
                     evolution_result,
                     It,
+                    tb,
+                    Isp
                 ) = sim.integration_simulation(
                     Pc=Pc,
                     Df=Df,
@@ -487,7 +499,7 @@ def main(page: ft.Page):
                 )
 
                 # 結果表示（仮）
-                evolution_output.value = f"✅ 計算完了, Total Inpulse = {It}[Ns]"
+                evolution_output.value = f"✅ 計算完了, Total Inpulse = {It}[Ns], 燃焼時間{tb}[sec], Isp{Isp}[s]"
             except Exception as ex:
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)
@@ -498,11 +510,15 @@ def main(page: ft.Page):
                 ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
                 ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
                 ("rho_ox", rho_ox), ("rho_fuel", rho_f),
-                ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt)
+                ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt),
+                ("Fuel Material",fuel_material)
+            ]
+
+            performance_params = [
+                ("It", It), ("Tb", tb), ("Isp", Isp) 
             ]
             def on_csv_download_click(e):
-                csv_data_url = get_csv_download_link(input_params, evolution_result)
-                page.launch_url(csv_data_url)
+                csv_data_url = get_csv_download_link(input_params, performance_params, evolution_result)
 
             csv_download_button.on_click = on_csv_download_click
             csv_download_button.visible = True
