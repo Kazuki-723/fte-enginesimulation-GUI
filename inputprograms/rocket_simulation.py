@@ -212,7 +212,7 @@ class RocketSimulation:
         log.append(f"初期酸化剤流量 = {self.mdot_ox_init:.6f}")
         log.append(f"初期燃料流量 = {self.mdot_f_init:.6f}")
         log.append(f"初期燃料内径(入力値) = {self.Df_init:.6f}")
-        log.append(f"燃料長さ = {self.Lf:.6f}")
+        log.append(f"燃料長さ = {self.Lf_total:.6f}")
         log.append("-------------")
 
         # 最終結果terminal出力
