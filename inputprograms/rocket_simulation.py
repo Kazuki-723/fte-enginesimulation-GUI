@@ -166,12 +166,12 @@ class RocketSimulation:
 
             # iteration log管理
             log.append(f"--- Iteration {self.j} ---")
-            log.append(f"Thrust = {self.F:.3f} [N]")
+            log.append(f"Thrust = {self.F:.6f} [N]")
             log.append(f"diff_F = {self.diff_F:.6f} [N]")
             log.append(f"mdot = {self.mdot_new:.6f} [kg/s]")
             log.append(f"Pe = {self.Pe_tmp1:.4f} [MPa]")
             log.append(f"epsilon_new = {self.epsilon_new:.4f}")
-            log.append(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
+            log.append(f"Dt = {self.Dt:.6f} m, De = {self.De:.6f} m")
             self.iter_logger.append(self.j, self.F, self.mdot_new, self.Pe_tmp1, self.epsilon_new)
 
             # 進捗を増やす
@@ -206,8 +206,8 @@ class RocketSimulation:
         log.append(f"最終mdot = {self.mdot_new:.6f} [kg/s]")
         log.append(f"最終Pe = {self.Pe_tmp1:.4f} [MPa]")
         log.append(f"最終epsilon = {self.epsilon_new:.4f}")
-        log.append(f"Dt = {self.Dt:.4f} m")
-        log.append(f"De = {self.De:.4f} m")
+        log.append(f"計算結果Dt = {self.Dt:.6f} m")
+        log.append(f"計算結果De = {self.De:.6f} m")
         log.append(f"K* = {self.Kstar}")
         log.append(f"初期酸化剤流量 = {self.mdot_ox_init:.6f}")
         log.append(f"初期燃料流量 = {self.mdot_f_init:.6f}")
