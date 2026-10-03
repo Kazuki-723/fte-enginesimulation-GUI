@@ -160,16 +160,70 @@ def main(page: ft.Page):
             graph_image.src = sim.get_iteration_plot_base64(Dovalue, cdvalue)
             graph_image.visible = True
 
+            page.session.store.set("Pc_def", Pc_def)
+            page.session.store.set("Df_init", Df_init)
+            page.session.store.set("eta_cstar", eta_cstar)
+            page.session.store.set("eta_nozzle", eta_nozzle)
+            page.session.store.set("OF_def", OF_def)
+            page.session.store.set("Ptank_init", Ptank_init)
+            page.session.store.set("rho_ox_init", rho_ox_init)
+            page.session.store.set("rho_f_start", rho_f_start)
+            page.session.store.set("a_ox", a_ox)
+            page.session.store.set("n_ox", n_ox)
+            page.session.store.set("fuel_material", fuel_material)
+
+            # resultデータのパーサー
+            def parse_initial_results(text: str) -> dict:
+                result = {}
+                # K*
+                match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
+                if match_k:
+                    result["Kstar"] = float(match_k.group(1))
+                # epsilon
+                match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
+                if match_eps:
+                    result["epsilon"] = float(match_eps.group(1))
+                # Lf（燃料長さ）
+                match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
+                if match_lf:
+                    result["Lf"] = float(match_lf.group(1))
+                # mdot
+                match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
+                if match_mdot:
+                    result["mdot"] = float(match_mdot.group(1))
+                # 初期推力F
+                match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
+                if match_F:
+                    result["F"] = float(match_F.group(1))
+                # Dt
+                match_Dt = re.search(r"Dt *= *([\d\.Ee+-]+)", text)
+                if match_Dt:
+                    result["Dt"] = float(match_Dt.group(1))
+
+                return result
+
+            results_parsed = parse_initial_results(output)
+
+            page.session.store.set("Kstar", results_parsed["Kstar"])
+            page.session.store.set("epsilon", results_parsed["epsilon"])
+            page.session.store.set("Lf", results_parsed["Lf"])
+            page.session.store.set("mdot", results_parsed["mdot"])
+            page.session.store.set("F", results_parsed["F"])
+            page.session.store.set("Dt", results_parsed["Dt"])
+            
             page.update()
 
         # 実行ボタンと遷移ボタンを並べる
+
+        def goto_evolution(e):
+            page.route = "/evolution"
+            page.on_route_change = route_change()
+            page.update()
+
         action_row = ft.Row(
             [
                 ft.Button("収束計算", on_click=run_simulation),
-                ft.TextButton(
-                    "▶ 時間発展ページへ",
-                    on_click=lambda _: (setattr(page, "route", "/evolution"), page.update())
-                ),
+                ft.Button("▶ 時間発展ページへ", on_click=goto_evolution)
             ]
         )
 
@@ -211,63 +265,35 @@ def main(page: ft.Page):
             ],
         )
 
-    # ちょっとパース
-    def parse_initial_results(text: str) -> dict:
-        result = {}
-        # K*
-        match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
-        if match_k:
-            result["Kstar"] = float(match_k.group(1))
-        # epsilon
-        match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
-        if match_eps:
-            result["epsilon"] = float(match_eps.group(1))
-        # Lf（燃料長さ）
-        match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
-        if match_lf:
-            result["Lf"] = float(match_lf.group(1))
-        # mdot
-        match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
-        if match_mdot:
-            result["mdot"] = float(match_mdot.group(1))
-        # 初期推力F
-        match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
-        if match_F:
-            result["F"] = float(match_F.group(1))
-        # Dt
-        match_Dt = re.search(r"Dt *= *([\d\.Ee+-]+)", text)
-        if match_Dt:
-            result["Dt"] = float(match_Dt.group(1))
-
-        return result
-
     # 時間発展ビュー（別ページ）
     def evolution_view():
-        initial = page.session.get("initial_conditions")
-        results = page.session.get("initial_results")  # K*, epsilon, Lf を含む
-        if results != None:
-            results_parsed = parse_initial_results(results)
+        # initial = page.session.get("initial_conditions")
+        # results = page.session.get("initial_results")  # K*, epsilon, Lf を含む
+        # if results != None:
+        #     results_parsed = parse_initial_results(results)
 
-        results_graph_image = ft.Image(visible=False, width=600)
+
+        results_graph_image = ft.Image(src= "", visible=False, width=600)
 
         # 初期値がある場合は値を埋める、なければ空欄
-        Pc_def = str(initial["Pc_def"]) if initial else ""
-        Df_init = str(initial["Df_init"]) if initial else ""
-        eta_cstar = str(initial["eta_cstar"]) if initial else ""
-        eta_nozzle = str(initial["eta_nozzle"]) if initial else ""
-        OF_def = str(initial["OF_def"]) if initial else ""
-        Pt_init = str(initial["Ptank_init"]) if initial else ""
-        rho_ox = str(initial["rho_ox_init"]) if initial else ""
-        rho_f = str(initial["rho_f_start"]) if initial else ""
-        a_ox = str(initial["a_ox"]) if initial else ""
-        n_ox = str(initial["n_ox"]) if initial else ""
+        Pc_def = str(page.session.store.get("Pc_def")) 
+        Df_init = str(page.session.store.get("Df_init")) 
+        eta_cstar = str(page.session.store.get("eta_cstar")) 
+        eta_nozzle = str(page.session.store.get("eta_nozzle")) 
+        OF_def = str(page.session.store.get("OF_def")) 
+        Pt_init = str(page.session.store.get("Ptank_init")) 
+        rho_ox = str(page.session.store.get("rho_ox_init")) 
+        rho_f = str(page.session.store.get("rho_f_start")) 
+        a_ox = str(page.session.store.get("a_ox")) 
+        n_ox = str(page.session.store.get("n_ox")) 
+        fuel_material = str(page.session.store.get("fuel_material")) 
 
-        Kstar = str(results_parsed["Kstar"]) if results_parsed else ""
-        epsilon = str(results_parsed["epsilon"]) if results_parsed else ""
-        Lf = str(results_parsed["Lf"]) if results_parsed else ""
-        mdot = str(results_parsed["mdot"]) if results_parsed else ""
-        F = str(results_parsed["F"]) if results_parsed else ""
-        Dt = str(results_parsed["Dt"]) if results_parsed else ""
+        Kstar = str(page.session.store.get("Kstar")) 
+        epsilon = str(page.session.store.get("epsilon")) 
+        Lf = str(page.session.store.get("Lf")) 
+        mdot = str(page.session.store.get("mdot")) 
+        F = str(page.session.store.get("F")) 
+        Dt = str(page.session.store.get("Dt")) 
 
         # 入力欄の定義
         Pc_box = ft.TextField(label="燃焼室圧力 Pc [MPa]", value=Pc_def, width=150)
@@ -276,6 +302,63 @@ def main(page: ft.Page):
         eta_cstar_box = ft.TextField(label="C*効率", value=eta_cstar, width=150)
         eta_nozzle_box = ft.TextField(label="ノズル効率", value=eta_nozzle, width=150)
 
+        # 登録物質と物性値（ABSのa, n は仮値）
+        materials = [
+            {"name": "MMA", "rho": 1190, "a": 0.000131, "n": 0.34},
+            {"name": "ABS", "rho": 1040, "a": 0.90, "n": 1.1}
+        ]
+
+        # Dropdown の options
+        def on_material_change():
+            options = []
+            for material in materials:
+                options.append(
+                    ft.DropdownOption(
+                        key = material["name"],
+                        content = ft.Text(value = material["name"]),
+                    )
+            )
+            return options
+
+        # 表示用テキスト群
+        density_text = ft.Text()
+        a_text = ft.Text()
+        n_text = ft.Text()
+
+        def rho_select(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value= f"a: {selected_properties['a']}"
+            n_text.value= f"n: {selected_properties['n']}"
+        
+        def rho_change(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value= f"a: {selected_properties['a']}"
+            n_text.value= f"n: {selected_properties['n']}"
+        # Dropdown 本体
+        material_dropdown = ft.Dropdown(
+            key = "material select",
+            options = on_material_change(),
+            value = fuel_material,
+            width=150,
+            on_select = rho_select,
+            on_text_change = rho_change,
+        )
+
+        property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
 
         Kstar_box = ft.TextField(label="K*", value=Kstar, width=150)
         epsilon_box = ft.TextField(label="膨張比 ε", value=epsilon, width=150)
@@ -289,9 +372,10 @@ def main(page: ft.Page):
         initial_pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", value=Pt_init,width=150)
         rho_ox_input = ft.TextField(label="初期酸化剤密度(圧力をいじる場合は調整してください．) [kg/s]", value=rho_ox,width=150)
         final_pressure_input = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
+        cea_input = ft.TextField(label="CEA更新頻度", width=150)
 
-        csv_download_button = ft.ElevatedButton(
-            text="CSV出力 ⬇",
+        csv_download_button = ft.Button(
+            "CSV出力 ⬇",
             icon=ft.Icons.DOWNLOAD,
             visible=False,
             on_click=lambda _: None,
@@ -357,9 +441,16 @@ def main(page: ft.Page):
                 F_init = float(F_box.value)
                 Dt = float(Dt_box.value)
                 rho_ox = float(rho_ox_input.value)
-                rho_f = initial["rho_f_start"]
-                a_ox = initial["a_ox"]
-                n_ox = initial["n_ox"]
+                fuel_material = material_dropdown.value
+                for m in materials:
+                    if m["name"] == fuel_material:
+                        props = m
+                rho_f = float(props["rho"])
+                a_ox  = float(props["a"])
+                n_ox  = float(props["n"])
+                cea_interval = float(cea_input.value)
+
+
 
                 # RocketSimulation呼び出し
                 (
@@ -389,8 +480,10 @@ def main(page: ft.Page):
                     rho_fuel=rho_f,
                     a=a_ox,
                     n=n_ox,
+                    fuel_material=fuel_material,
                     F=F_init,
                     Dt=Dt,
+                    cea_interval=cea_interval
                 )
 
                 # 結果表示（仮）
@@ -413,16 +506,21 @@ def main(page: ft.Page):
 
             csv_download_button.on_click = on_csv_download_click
             csv_download_button.visible = True
-            results_graph_image.src_base64 = sim.get_evolution_plot_base64(
+            results_graph_image.src = sim.get_evolution_plot_base64(
                 time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
             )
             results_graph_image.visible = True
             page.update()
 
-        run_button = ft.ElevatedButton(
-            text="時間発展計算 ▶", on_click=on_run_simulation
+        run_button = ft.Button(
+            "時間発展計算 ▶", on_click=on_run_simulation
         )
         evolution_output = ft.Text("🕒 時間発展シミュレーション")
+
+        def go_back(e):
+                    page.route = "/"
+                    page.on_route_change = route_change()
+                    page.update()
 
         return ft.View(
             route="/evolution",
@@ -439,6 +537,8 @@ def main(page: ft.Page):
                                 OF_box,
                                 eta_cstar_box,
                                 eta_nozzle_box,
+                                material_dropdown,
+                                property_column,
                             ],
                             spacing=10,
                         ),
@@ -463,6 +563,7 @@ def main(page: ft.Page):
                                 initial_pressure_input,
                                 rho_ox_input, 
                                 final_pressure_input,
+                                cea_input,
                             ],
                             spacing=10,
                         ),
@@ -480,7 +581,7 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.START,
                     vertical_alignment=ft.CrossAxisAlignment.START,
                 ),
-                ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/")),
+                ft.TextButton("◀ 戻る", on_click=go_back),
             ],
         )
     
