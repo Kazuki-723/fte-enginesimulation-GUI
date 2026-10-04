@@ -64,8 +64,8 @@ def main(page: ft.Page):
                     selected_properties = m
             # text出力
             density_text.value = f"密度: {selected_properties['rho']}"
-            a_text.value= f"a: {selected_properties['a']}"
-            n_text.value= f"n: {selected_properties['n']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
         
         def rho_change(e):
             # Dropdownで選択したmaterialの抽出
@@ -76,8 +76,8 @@ def main(page: ft.Page):
                     selected_properties = m
             # text出力
             density_text.value = f"密度: {selected_properties['rho']}"
-            a_text.value= f"a: {selected_properties['a']}"
-            n_text.value= f"n: {selected_properties['n']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
         # Dropdown 本体
         material_dropdown = ft.Dropdown(
             key = "material select",
@@ -284,27 +284,27 @@ def main(page: ft.Page):
         results_graph_image = ft.Image(src= "", visible=False, width=600)
 
         # 初期値がある場合は値を埋める、なければ空欄
-        Pc_def = str(page.session.store.get("Pc_def")) 
-        Df_init = str(page.session.store.get("Df_init")) 
-        eta_cstar = str(page.session.store.get("eta_cstar")) 
-        eta_nozzle = str(page.session.store.get("eta_nozzle")) 
-        OF_def = str(page.session.store.get("OF_def")) 
-        Pt_init = str(page.session.store.get("Ptank_init")) 
-        rho_ox = str(page.session.store.get("rho_ox_init")) 
+        Pc_def        = str(page.session.store.get("Pc_def")) 
+        Df_init       = str(page.session.store.get("Df_init")) 
+        eta_cstar     = str(page.session.store.get("eta_cstar")) 
+        eta_nozzle    = str(page.session.store.get("eta_nozzle")) 
+        OF_def        = str(page.session.store.get("OF_def")) 
+        Pt_init       = str(page.session.store.get("Ptank_init")) 
+        rho_ox        = str(page.session.store.get("rho_ox_init")) 
         fuel_material = str(page.session.store.get("fuel_material")) 
 
-        Kstar = str(page.session.store.get("Kstar")) 
+        Kstar   = str(page.session.store.get("Kstar")) 
         epsilon = str(page.session.store.get("epsilon")) 
-        Lf = str(page.session.store.get("Lf")) 
-        mdot = str(page.session.store.get("mdot")) 
-        F = str(page.session.store.get("F")) 
-        Dt = str(page.session.store.get("Dt")) 
+        Lf      = str(page.session.store.get("Lf")) 
+        mdot    = str(page.session.store.get("mdot")) 
+        F       = str(page.session.store.get("F")) 
+        Dt      = str(page.session.store.get("Dt")) 
 
         # 入力欄の定義
-        Pc_box = ft.TextField(label="燃焼室圧力 Pc [MPa]", value=Pc_def, width=150)
-        Df_box = ft.TextField(label="初期ポート径 Df [m]", value=Df_init, width=150)
-        OF_box = ft.TextField(label="初期OF比", value=OF_def, width=150)
-        eta_cstar_box = ft.TextField(label="C*効率", value=eta_cstar, width=150)
+        Pc_box         = ft.TextField(label="燃焼室圧力 Pc [MPa]", value=Pc_def, width=150)
+        Df_box         = ft.TextField(label="初期ポート径 Df [m]", value=Df_init, width=150)
+        OF_box         = ft.TextField(label="初期OF比", value=OF_def, width=150)
+        eta_cstar_box  = ft.TextField(label="C*効率", value=eta_cstar, width=150)
         eta_nozzle_box = ft.TextField(label="ノズル効率", value=eta_nozzle, width=150)
 
         # 物性値の参照
@@ -324,8 +324,8 @@ def main(page: ft.Page):
 
         # 表示用テキスト群
         density_text = ft.Text()
-        a_text = ft.Text()
-        n_text = ft.Text()
+        a_text       = ft.Text()
+        n_text       = ft.Text()
 
         def rho_select(e):
             # Dropdownで選択したmaterialの抽出
@@ -336,8 +336,8 @@ def main(page: ft.Page):
                     selected_properties = m
             # text出力
             density_text.value = f"密度: {selected_properties['rho']}"
-            a_text.value= f"a: {selected_properties['a']}"
-            n_text.value= f"n: {selected_properties['n']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
         
         def rho_change(e):
             # Dropdownで選択したmaterialの抽出
@@ -348,33 +348,33 @@ def main(page: ft.Page):
                     selected_properties = m
             # text出力
             density_text.value = f"密度: {selected_properties['rho']}"
-            a_text.value= f"a: {selected_properties['a']}"
-            n_text.value= f"n: {selected_properties['n']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
         # Dropdown 本体
         material_dropdown = ft.Dropdown(
             key = "material select",
             options = on_material_change(),
             value = fuel_material,
-            width=150,
+            width = 150,
             on_select = rho_select,
             on_text_change = rho_change,
         )
 
         property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
 
-        Kstar_box = ft.TextField(label="K*", value=Kstar, width=150)
+        Kstar_box   = ft.TextField(label="K*", value=Kstar, width=150)
         epsilon_box = ft.TextField(label="膨張比 ε", value=epsilon, width=150)
-        Lf_box = ft.TextField(label="燃焼長 Lf [m]", value=Lf, width=150)
-        mdot_box = ft.TextField(label="推進剤流量 mdot [kg/s]", value=mdot, width=150)
-        F_box = ft.TextField(label="初期推力F [N]", value=F, width=150)
-        Dt_box = ft.TextField(label="スロート径 [m]", value=Dt, width=150)
+        Lf_box      = ft.TextField(label="燃焼長 Lf [m]", value=Lf, width=150)
+        mdot_box    = ft.TextField(label="推進剤流量 mdot [kg/s]", value=mdot, width=150)
+        F_box       = ft.TextField(label="初期推力F [N]", value=F, width=150)
+        Dt_box      = ft.TextField(label="スロート径 [m]", value=Dt, width=150)
 
         # タンク容積と最終酸化剤圧力の入力欄
-        tank_volume_input = ft.TextField(label="タンク容積 [m³]", width=150)
+        tank_volume_input      = ft.TextField(label="タンク容積 [m³]", width=150)
         initial_pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", value=Pt_init,width=150)
-        rho_ox_input = ft.TextField(label="初期酸化剤密度(圧力をいじる場合は調整してください．) [kg/s]", value=rho_ox,width=150)
-        final_pressure_input = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
-        cea_input = ft.TextField(label="CEA更新頻度", width=150)
+        rho_ox_input           = ft.TextField(label="初期酸化剤密度(圧力をいじる場合は調整してください．) [kg/s]", value=rho_ox,width=150)
+        final_pressure_input   = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
+        cea_input              = ft.TextField(label="CEA更新頻度", width=150)
 
         csv_download_button = ft.Button(
             "CSV出力 ⬇",
@@ -443,28 +443,30 @@ def main(page: ft.Page):
         def on_run_simulation(e):
             try:
                 # 各入力欄から値を取得
-                Pc = float(Pc_box.value)
-                Df = float(Df_box.value)
-                OF = float(OF_box.value)
-                eta_cstar = float(eta_cstar_box.value)
-                eta_nozzle = float(eta_nozzle_box.value)
-                Kstar = float(Kstar_box.value)
-                epsilon = float(epsilon_box.value)
-                Lf = float(Lf_box.value)
-                mdot = float(mdot_box.value)
-                V_tank = float(tank_volume_input.value)
-                P_init = float(initial_pressure_input.value)
-                P_final = float(final_pressure_input.value)
-                F_init = float(F_box.value)
-                Dt = float(Dt_box.value)
-                rho_ox = float(rho_ox_input.value)
+                Pc            = float(Pc_box.value)
+                Df            = float(Df_box.value)
+                OF            = float(OF_box.value)
+                eta_cstar     = float(eta_cstar_box.value)
+                eta_nozzle    = float(eta_nozzle_box.value)
+                Kstar         = float(Kstar_box.value)
+                epsilon       = float(epsilon_box.value)
+                Lf            = float(Lf_box.value)
+                mdot          = float(mdot_box.value)
+                V_tank        = float(tank_volume_input.value)
+                P_init        = float(initial_pressure_input.value)
+                P_final       = float(final_pressure_input.value)
+                F_init        = float(F_box.value)
+                Dt            = float(Dt_box.value)
+                rho_ox        = float(rho_ox_input.value)
                 fuel_material = material_dropdown.value
+
                 for m in materials:
                     if m["name"] == fuel_material:
                         props = m
-                rho_f = float(props["rho"])
-                a_ox  = float(props["a"])
-                n_ox  = float(props["n"])
+                
+                rho_f        = float(props["rho"])
+                a_ox         = float(props["a"])
+                n_ox         = float(props["n"])
                 cea_interval = float(cea_input.value)
 
             except Exception as ex:
@@ -488,26 +490,26 @@ def main(page: ft.Page):
                     tb,
                     Isp
                 ) = sim.integration_simulation(
-                    Pc=Pc,
-                    Df=Df,
-                    OF=OF,
-                    eta_cstar=eta_cstar,
-                    eta_nozzle=eta_nozzle,
-                    Kstar=Kstar,
-                    epsilon=epsilon,
-                    Lf=Lf,
-                    mdot=mdot,
-                    V_tank=V_tank,
-                    P_init=P_init,
-                    P_final=P_final,
-                    rho_ox=rho_ox,
-                    rho_fuel=rho_f,
-                    a=a_ox,
-                    n=n_ox,
-                    fuel_material=fuel_material,
-                    F=F_init,
-                    Dt=Dt,
-                    cea_interval=cea_interval
+                    Pc            = Pc,
+                    Df            = Df,
+                    OF            = OF,
+                    eta_cstar     = eta_cstar,
+                    eta_nozzle    = eta_nozzle,
+                    Kstar         = Kstar,
+                    epsilon       = epsilon,
+                    Lf            = Lf,
+                    mdot          = mdot,
+                    V_tank        = V_tank,
+                    P_init        = P_init,
+                    P_final       = P_final,
+                    rho_ox        = rho_ox,
+                    rho_fuel      = rho_f,
+                    a             = a_ox,
+                    n             = n_ox,
+                    fuel_material = fuel_material,
+                    F             = F_init,
+                    Dt            = Dt,
+                    cea_interval  = cea_interval
                 )
 
                 # 結果表示（仮）
@@ -532,8 +534,11 @@ def main(page: ft.Page):
             def on_csv_download_click(e):
                 csv_data_url = get_csv_download_link(input_params, performance_params, evolution_result)
 
+            # 結果csvのダウンロード処理
             csv_download_button.on_click = on_csv_download_click
             csv_download_button.visible = True
+
+            # resultのグラフ描画
             results_graph_image.src = sim.get_evolution_plot_base64(
                 time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
             )
@@ -637,6 +642,5 @@ def main(page: ft.Page):
     page.on_route_change = route_change()
     page.route = "/"
     page.update()
-
 
 ft.run(main)
