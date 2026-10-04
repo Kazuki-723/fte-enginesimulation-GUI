@@ -4,9 +4,7 @@ from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 import re
 from datetime import datetime
-
-# 現在最新バージョンへの対応作業中
-# 動かす際は，旧バージョンのfletを使用するように 
+import base64
 
 # 物性値のMaster
 # ABSのa,nは雑
@@ -19,6 +17,9 @@ def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"
     page.scroll = ft.ScrollMode.AUTO
 
+    page.horizontal_alignment = ft.CrossAxisAlignment.START
+    page.vertical_alignment = ft.MainAxisAlignment.START
+
     # メインビュー（初期条件＋収束）
     def main_view():
         inputs = {
@@ -28,7 +29,7 @@ def main(page: ft.Page):
             "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150, value=0.33),
             "Df_init": ft.TextField(label="初期燃料内径 [m]", width=150, value=0.034),
             "eta_cstar": ft.TextField(label="C*効率", width=150, value=0.8),
-            "eta_nozzle": ft.TextField(label="ノズル効率", width=150, value=0.98),
+            "eta_nozzle": ft.TextField(label="ノズル効率", width=150, value=1),
         }
 
         result_text = ft.Text()
@@ -162,8 +163,21 @@ def main(page: ft.Page):
             # --- 結果表示 ---
             result_text.value = output
 
+            # グラフ画像の取得
             graph_image.src = sim.get_iteration_plot_base64(Dovalue, cdvalue)
             graph_image.visible = True
+
+            # 画像の保存
+            # base64 → バイナリに変換
+            image_bytes = base64.b64decode(graph_image.src)
+
+            # 保存先（相対パス）
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"imageoutput\\init_result_graph_{timestamp}.png"
+
+            # PNG として保存
+            with open(filename, "wb") as f:
+                f.write(image_bytes)
 
             page.session.store.set("Pc_def", Pc_def)
             page.session.store.set("Df_init", Df_init)
@@ -245,8 +259,6 @@ def main(page: ft.Page):
         )
 
         # 右側：収束グラフと K* グラフを縦に並べる
-        graph_image = ft.Image(src = "", visible=False, width=page.width - 200)
-
         graph_column = ft.Column(
             controls=[graph_image],
             spacing=10,
@@ -526,6 +538,18 @@ def main(page: ft.Page):
                 time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
             )
             results_graph_image.visible = True
+
+            # 画像の保存
+            # base64 → バイナリに変換
+            image_bytes = base64.b64decode(results_graph_image.src)
+
+            # 保存先（相対パス）
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"imageoutput\\evo_result_graph_{timestamp}.png"
+
+            # PNG として保存
+            with open(filename, "wb") as f:
+                f.write(image_bytes)
             page.update()
 
         run_button = ft.Button(
