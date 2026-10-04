@@ -1,7 +1,12 @@
 # FTE enginesimulator 2.0.0. GUI
 大本の，CLIから派生してGUIサポート専用のリポジトリです．
 
-基本CLIのほうが先に更新されるので，CLI推奨．
+CLIのバージョン更新を反映してこちらを更新していく予定．
+
+現在のCLIバージョン：v2.0.0 + 2commit
+(https://github.com/Kazuki-723/fte-enginesimulation/commit/f4ff21805846a1168da967d810ac82a33882d3bb)
+
+ここから先はCLIのコピーなので後ほど修正．
 
 # 主要機能
 - 要求された初期推力に対する初期条件の計算モード
