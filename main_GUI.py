@@ -20,7 +20,47 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.START
     page.vertical_alignment = ft.MainAxisAlignment.START
 
-    # メインビュー（初期条件＋収束）
+    # 形状選択ビュー
+    def shape_select_view():
+        def goto_main(e):
+            page.route = "/main"
+            page.on_route_change = route_change()
+            page.update()
+
+        def goto_noncircular(e):
+            page.route = "/noncircular"
+            page.on_route_change = route_change()
+            page.update()
+
+        return ft.View(
+            route="/shape_select",
+            controls=[
+                ft.Column(
+                    [
+                        ft.Text("ポート形状を選択してください", size=24, weight="bold"),
+
+                        ft.Row(
+                            [
+                                ft.Button(
+                                    "円形ポート",
+                                    on_click=goto_main
+                                ),
+                                ft.Button(
+                                    "円形以外のポート",
+                                    on_click=goto_noncircular
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                )
+            ]
+        )
+
+
+    # 円形ポートmainview
     def main_view():
         inputs = {
             "F_req": ft.TextField(label="要求推力 [N]", width=150, value=650),
@@ -269,7 +309,7 @@ def main(page: ft.Page):
         )
 
         return ft.View(
-            route="/",
+            route="/main",
             controls=[
                 ft.Row(
                     controls=[input_column, graph_column],
@@ -563,7 +603,7 @@ def main(page: ft.Page):
         evolution_output = ft.Text("🕒 時間発展シミュレーション")
 
         def go_back(e):
-                    page.route = "/"
+                    page.route = "/main"
                     page.on_route_change = route_change()
                     page.update()
 
@@ -629,18 +669,47 @@ def main(page: ft.Page):
                 ft.TextButton("◀ 戻る", on_click=go_back),
             ],
         )
+
+    def noncircular_dummy_view():
+        def goto_shape_select(e):
+                page.route = "/shape_select"
+                page.on_route_change = route_change()
+                page.update()
+        return ft.View(
+            route="/noncircular",
+            controls=[
+                ft.Column(
+                    [
+                        ft.Text("非円形ポート形状の設定画面（ダミー）", size=22),
+                        ft.Text("ここに後で実際の入力フォームを追加します。"),
+                        ft.Button("戻る", on_click=lambda e: goto_shape_select(e)),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                )
+            ]
+        )
+
     
     # ページ切り替え処理
     def route_change():
         page.views.clear()
-        if page.route == "/":
+        # 初期の形状選択画面
+        if page.route == "/shape_select":
+            page.views.append(shape_select_view())
+        # 円形ポート計算用の初期画面
+        elif page.route == "/main":
             page.views.append(main_view())
+        # 円形ポート計算用の時間発展画面
         elif page.route == "/evolution":
             page.views.append(evolution_view())
+        # levelset計算用の初期画面
+        elif page.route == "/noncircular":
+            page.views.append(noncircular_dummy_view())
         page.update()
 
+    page.route = "/shape_select"
     page.on_route_change = route_change()
-    page.route = "/"
     page.update()
 
 ft.run(main)
