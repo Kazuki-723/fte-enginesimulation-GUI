@@ -118,3 +118,30 @@ class IterationLogger:
         buf.close()
         plt.close(fig)
         return encoded
+
+    # geometry表示用のグラフ
+    def plot_geometry(geometry):
+        # geometry = [(x,y), (x,y), ...]
+        xs = [p[0] for p in geometry]
+        ys = [p[1] for p in geometry]
+
+        # 閉曲線にするために1点目を追加
+        xs.append(xs[0])
+        ys.append(ys[0])
+
+        fig, ax = plt.subplots(figsize=(4,4))
+        ax.plot(xs, ys, "-o", markersize=2)
+        ax.set_aspect("equal", adjustable="box")
+        ax.set_title("Generated Geometry")
+
+        # PNG をメモリに保存
+        plt.tight_layout()
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        buf.seek(0)
+
+        # base64 に変換
+        encoded = base64.b64encode(buf.read()).decode("utf-8")
+        buf.close()
+        plt.close(fig)        
+        return encoded

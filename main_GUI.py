@@ -2,6 +2,8 @@ import flet as ft
 import csv
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
+from inputprograms.iteration_logger import IterationLogger
+import inputprograms.make_sample_geometry
 import re
 from datetime import datetime
 import base64
@@ -674,37 +676,55 @@ def main(page: ft.Page):
         # 戻るよう
         def goto_shape_select(e):
             page.route = "/shape_select"
-            page.on_route_change = route_change()
+            page.on_route_change = route_change
             page.update()
+
+        # クラス定義
+        geom_make = inputprograms.make_sample_geometry
 
         # 動的に切り替えるフォームを入れるコンテナ
         form_container = ft.Column(expand=True)
 
+        # 結果のgeometry表示用
+        geometry_image = ft.Image(src="", visible=False, expand=True)
+
         # --- 各形状のフォーム定義 ---
         # gizagiza
+        gizagiza_d = ft.TextField(label="d（内径）", width=200)
+        gizagiza_D = ft.TextField(label="D（外径）", width=200)
+        gizagiza_n = ft.TextField(label="n（ギザ数）", width=200)
+
         gizagiza_form = ft.Column(
             [
-                ft.TextField(label="d（内径）", width=200),
-                ft.TextField(label="D（外径）", width=200),
-                ft.TextField(label="n（ギザ数）", width=200),
+                gizagiza_d,
+                gizagiza_D,
+                gizagiza_n,
             ]
         )
 
         # gear
+        gear_d = ft.TextField(label="d（内径）", width=200)
+        gear_D = ft.TextField(label="D（外径）", width=200)
+        gear_ratio = ft.TextField(label="ratio（内径:外径）", width=200)
+        gear_n = ft.TextField(label="n（ギザ数）", width=200)
+
         gear_form = ft.Column(
             [
-                ft.TextField(label="d（内径）", width=200),
-                ft.TextField(label="D（外径）", width=200),
-                ft.TextField(label="ratio（内径:外径）", width=200),
-                ft.TextField(label="n（ギザ数）", width=200),
+                gear_d,
+                gear_D,
+                gear_ratio,
+                gear_n,
             ]
         )
 
         # koch
+        koch_order = ft.TextField(label="order（再帰回数）", width=200)
+        koch_scale = ft.TextField(label="scale（一辺長）", width=200)
+
         koch_form = ft.Column(
             [
-                ft.TextField(label="order（再帰回数）", width=200),
-                ft.TextField(label="scale（一辺長）", width=200),
+                koch_order,
+                koch_scale,
             ]
         )
 
@@ -732,27 +752,95 @@ def main(page: ft.Page):
                 ft.dropdown.Option("gear"),
                 ft.dropdown.Option("koch"),
             ],
-            on_select = on_shape_change,
-            on_text_change = on_shape_change,
+            on_select=on_shape_change,
+            on_text_change=on_shape_change,
             width=200,
         )
+
+        # --- ここから geometry 生成処理を追加 ---
+        result_text = ft.Text("")
+
+        def generate_geometry(e):
+            shape = shape_dropdown.value
+
+            try:
+                if shape == "gizagiza":
+                    d = float(gizagiza_d.value)
+                    D = float(gizagiza_D.value)
+                    n = int(gizagiza_n.value)
+
+                    geometry = geom_make.make_gizagiza(d, D, n)
+                    print("end make gizagiza")
+
+                elif shape == "gear":
+                    d = float(gear_d.value)
+                    D = float(gear_D.value)
+                    ratio = float(gear_ratio.value)
+                    n = int(gear_n.value)
+
+                    geometry = geom_make.make_gear(d, D, (1, ratio), n)
+                    print("end make gear")
+
+                elif shape == "koch":
+                    order = int(koch_order.value)
+                    scale = float(koch_scale.value)
+
+                    geometry = geom_make.koch_snowflake(order, scale)
+                    print("end make kochsnow")
+
+                else:
+                    result_text.value = "⚠️ 形状が選択されていません"
+                    page.update()
+                    return
+
+            except ValueError:
+                result_text.value = "⚠️ 数値を正しく入力してください"
+                page.update()
+                return
+
+            # 画像処理
+            geometry_image.src = IterationLogger.plot_geometry(geometry)
+            geometry_image.visible = True
+
+            # テキスト処理
+            result_text.value = f"geometry を生成しました（点数: {len(geometry)}）"
+            page.update()
 
         # --- 画面構成 ---
         return ft.View(
             route="/noncircular",
             controls=[
-                ft.Column(
-                    [
-                        ft.Text("非円形ポート形状の入力", size=24, weight="bold"),
-                        shape_dropdown,
-                        form_container,
-                        ft.Button("戻る", on_click=goto_shape_select),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    expand=True,
-                )
-            ]
+    ft.Row(
+        controls=[
+            # 左側：入力フォーム
+            ft.Column(
+                        [
+                            ft.Text("非円形ポート形状の入力", size=24, weight="bold"),
+                            shape_dropdown,
+                            form_container,
+                            ft.Button("ジオメトリ生成", on_click=generate_geometry),
+                            result_text,
+                            ft.Button("戻る", on_click=goto_shape_select),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
+                    ),
+
+                    # 右側：画像表示
+                    ft.Column(
+                        [
+                            geometry_image,
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
+                    ),
+                ],
+                expand=True,
+            )
+        ]
+
         )
+
 
     
     # ページ切り替え処理
