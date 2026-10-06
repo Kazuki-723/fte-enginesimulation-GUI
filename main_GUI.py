@@ -7,6 +7,7 @@ import inputprograms.make_sample_geometry
 import re
 from datetime import datetime
 import base64
+import numpy as np
 
 # 物性値のMaster
 # ABSのa,nは雑
@@ -682,6 +683,10 @@ def main(page: ft.Page):
         # クラス定義
         geom_make = inputprograms.make_sample_geometry
 
+        # dummyのgeometryとshapeを作成
+        geometry = []
+        shape = None
+
         # 動的に切り替えるフォームを入れるコンテナ
         form_container = ft.Column(expand=True)
 
@@ -727,6 +732,8 @@ def main(page: ft.Page):
                 koch_scale,
             ]
         )
+
+        geometry_csv_button = ft.Button("CSV 出力", visible=False, on_click=lambda _: None,)
 
         # --- Dropdown 選択時の動作 ---
         def on_shape_change(e):
@@ -804,6 +811,29 @@ def main(page: ft.Page):
 
             # テキスト処理
             result_text.value = f"geometry を生成しました（点数: {len(geometry)}）"
+
+            # csvdownload用の発火点
+            def on_csv_download_click(e):
+                            csv_data_url = export_csv(shape, geometry)
+
+            geometry_csv_button.on_click = on_csv_download_click
+            geometry_csv_button.visible = True
+
+            page.update()
+
+        # --- CSV 出力処理 ---
+        def export_csv(shape, geometry):
+            if shape is None:
+                result_text.value = "⚠️ 先にジオメトリを生成してください"
+                page.update()
+                return
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{shape}_geometry_{timestamp}.csv"
+
+            np.savetxt(filename, geometry, fmt="%.6f", delimiter=",")
+
+            result_text.value = f"CSV を出力しました: {filename}"
             page.update()
 
         # --- 画面構成 ---
@@ -818,7 +848,12 @@ def main(page: ft.Page):
                             ft.Text("非円形ポート形状の入力", size=24, weight="bold"),
                             shape_dropdown,
                             form_container,
-                            ft.Button("ジオメトリ生成", on_click=generate_geometry),
+                            ft.Row(
+                                controls=[
+                                    ft.Button("ジオメトリ生成", on_click=generate_geometry),
+                                    geometry_csv_button,
+                                ]
+                            ),
                             result_text,
                             ft.Button("戻る", on_click=goto_shape_select),
                         ],
