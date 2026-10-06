@@ -677,7 +677,7 @@ def main(page: ft.Page):
         # 戻るよう
         def goto_shape_select(e):
             page.route = "/shape_select"
-            page.on_route_change = route_change
+            page.on_route_change = route_change()
             page.update()
 
         # クラス定義
@@ -840,6 +840,11 @@ def main(page: ft.Page):
             result_text.value = f"CSV を出力しました: {filename}"
             page.update()
 
+        def goto_levelset_calc(e):
+            page.route = "/levelset_calc"
+            page.on_route_change = route_change()
+            page.update()
+        
         # --- 画面構成 ---
         return ft.View(
             route="/noncircular",
@@ -859,7 +864,12 @@ def main(page: ft.Page):
                                 ]
                             ),
                             result_text,
-                            ft.Button("戻る", on_click=goto_shape_select),
+                            ft.Row(
+                                controls=[
+                                ft.Button("戻る", on_click=goto_shape_select),
+                                ft.Button("距離関数の計算", on_click=goto_levelset_calc),
+                                ]
+                            ),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         expand=True,
@@ -880,6 +890,27 @@ def main(page: ft.Page):
 
         )
 
+    def levelset_calc_view():
+        # 戻るよう
+        def goto_noncircular_geometry(e):
+            page.route = "/noncircular"
+            page.on_route_change = route_change()
+            page.update()
+
+        return ft.View(
+            route="/levelset_calc",
+            controls=[
+                ft.Column(
+                    [
+                        ft.Text("距離関数の計算ページ（内容は後で追加）", size=24),
+                        ft.Button("戻る", on_click=goto_noncircular_geometry),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                )
+            ]
+        )
+
 
     
     # ページ切り替え処理
@@ -894,9 +925,12 @@ def main(page: ft.Page):
         # 円形ポート計算用の時間発展画面
         elif page.route == "/evolution":
             page.views.append(evolution_view())
-        # levelset計算用の初期画面
+        # geometry点群計算用の初期画面
         elif page.route == "/noncircular":
             page.views.append(noncircular_geometry_view())
+        # levelset関数計算画面
+        elif page.route == "/levelset_calc":
+            page.views.append(levelset_calc_view())
         page.update()
 
     page.route = "/shape_select"
