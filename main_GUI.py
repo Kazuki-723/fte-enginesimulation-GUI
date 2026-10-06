@@ -670,19 +670,83 @@ def main(page: ft.Page):
             ],
         )
 
-    def noncircular_dummy_view():
+    def noncircular_geometry_view():
+        # 戻るよう
         def goto_shape_select(e):
-                page.route = "/shape_select"
-                page.on_route_change = route_change()
-                page.update()
+            page.route = "/shape_select"
+            page.on_route_change = route_change()
+            page.update()
+
+        # 動的に切り替えるフォームを入れるコンテナ
+        form_container = ft.Column(expand=True)
+
+        # --- 各形状のフォーム定義 ---
+        # gizagiza
+        gizagiza_form = ft.Column(
+            [
+                ft.TextField(label="d（内径）", width=200),
+                ft.TextField(label="D（外径）", width=200),
+                ft.TextField(label="n（ギザ数）", width=200),
+            ]
+        )
+
+        # gear
+        gear_form = ft.Column(
+            [
+                ft.TextField(label="d（内径）", width=200),
+                ft.TextField(label="D（外径）", width=200),
+                ft.TextField(label="ratio（内径:外径）", width=200),
+                ft.TextField(label="n（ギザ数）", width=200),
+            ]
+        )
+
+        # koch
+        koch_form = ft.Column(
+            [
+                ft.TextField(label="order（再帰回数）", width=200),
+                ft.TextField(label="scale（一辺長）", width=200),
+            ]
+        )
+
+        # --- Dropdown 選択時の動作 ---
+        def on_shape_change(e):
+            selected = e.data
+            form_container.controls.clear()
+
+            if selected == "gizagiza":
+                form_container.controls.append(gizagiza_form)
+
+            elif selected == "gear":
+                form_container.controls.append(gear_form)
+
+            elif selected == "koch":
+                form_container.controls.append(koch_form)
+
+            page.update()
+
+        # 形状選択用 Dropdown
+        shape_dropdown = ft.Dropdown(
+            label="ポート形状を選択",
+            options=[
+                ft.dropdown.Option("gizagiza"),
+                ft.dropdown.Option("gear"),
+                ft.dropdown.Option("koch"),
+            ],
+            on_select = on_shape_change,
+            on_text_change = on_shape_change,
+            width=200,
+        )
+
+        # --- 画面構成 ---
         return ft.View(
             route="/noncircular",
             controls=[
                 ft.Column(
                     [
-                        ft.Text("非円形ポート形状の設定画面（ダミー）", size=22),
-                        ft.Text("ここに後で実際の入力フォームを追加します。"),
-                        ft.Button("戻る", on_click=lambda e: goto_shape_select(e)),
+                        ft.Text("非円形ポート形状の入力", size=24, weight="bold"),
+                        shape_dropdown,
+                        form_container,
+                        ft.Button("戻る", on_click=goto_shape_select),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     expand=True,
@@ -705,7 +769,7 @@ def main(page: ft.Page):
             page.views.append(evolution_view())
         # levelset計算用の初期画面
         elif page.route == "/noncircular":
-            page.views.append(noncircular_dummy_view())
+            page.views.append(noncircular_geometry_view())
         page.update()
 
     page.route = "/shape_select"
