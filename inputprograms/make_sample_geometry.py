@@ -88,6 +88,39 @@ def dh_maxmin(geometry):
     dh = np.linalg.norm(v_lines,axis=1)
     print(f"max : {np.max(dh)}")
     print(f"min : {np.min(dh)}")
+
+def densify_geometry(geometry, threshold):
+    """
+    geometry: [(x,y), ...]
+    threshold: float (最大隣接距離がこれ以下になるまで増殖)
+    """
+
+    geom = np.array(geometry)
+
+    while True:
+        # 隣接点距離を計算（閉曲線なので最後→最初も含む）
+        diffs = np.diff(geom, axis=0)
+        last = geom[0] - geom[-1]
+        diffs = np.vstack([diffs, last])
+
+        dists = np.linalg.norm(diffs, axis=1)
+        max_dist = np.max(dists)
+
+        if max_dist <= threshold:
+            break
+
+        # 中点を追加して増殖
+        new_points = []
+        for i in range(len(geom)):
+            p1 = geom[i]
+            p2 = geom[(i+1) % len(geom)]
+            mid = (p1 + p2) / 2.0
+            new_points.append(p1)
+            new_points.append(mid)
+
+        geom = np.array(new_points)
+
+    return geom
     
 
 if __name__=='__main__':

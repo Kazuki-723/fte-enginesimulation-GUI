@@ -828,10 +828,14 @@ def main(page: ft.Page):
                 page.update()
                 return
 
+            # 点データ増殖
+            threshold = 1e-4
+            dense_geom = geom_make.densify_geometry(geometry, threshold)
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{shape}_geometry_{timestamp}.csv"
 
-            np.savetxt(filename, geometry, fmt="%.6f", delimiter=",")
+            np.savetxt(filename, dense_geom, fmt="%.6f", delimiter=",")
 
             result_text.value = f"CSV を出力しました: {filename}"
             page.update()
