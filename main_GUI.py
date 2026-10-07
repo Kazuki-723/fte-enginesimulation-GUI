@@ -1128,6 +1128,11 @@ def main(page: ft.Page):
 
             return filename
 
+        def goto_initial_condition(e):
+            page.route = "/levelset_initial_condition"
+            page.on_route_change = route_change()
+            page.update()
+
 
         return ft.View(
             route="/levelset_calc",
@@ -1169,6 +1174,7 @@ def main(page: ft.Page):
                                         ]
                                     ),
                                 result_text,
+                                ft.Button("初期条件ページへ", on_click=goto_initial_condition),
                             ],
                             expand=True,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1189,6 +1195,28 @@ def main(page: ft.Page):
             ]
         )
 
+    def initial_condition_view():
+        def goto_levelset_calc(e):
+            page.route = "/levelset_calc"
+            page.on_route_change = route_change()
+            page.update()
+        return ft.View(
+            route="/levelset_initial_condition",
+            controls=[
+                ft.Column(
+                    [
+                        ft.Text("初期条件計算ページ（Dummy）", size=28, weight="bold"),
+                        ft.Text("ここに levelset と geometry を使った初期条件計算を追加します。"),
+
+                        ft.Button("戻る", on_click=goto_levelset_calc),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                )
+            ]
+        )
+
+
 
     # ページ切り替え処理
     def route_change():
@@ -1208,6 +1236,9 @@ def main(page: ft.Page):
         # levelset関数計算画面
         elif page.route == "/levelset_calc":
             page.views.append(levelset_calc_view())
+        # levelsetによる初期条件計算
+        elif page.route == "/levelset_initial_condition":
+            page.views.append(initial_condition_view())
         page.update()
 
     page.route = "/shape_select"
