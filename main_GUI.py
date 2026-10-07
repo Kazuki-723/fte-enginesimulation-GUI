@@ -1018,6 +1018,24 @@ def main(page: ft.Page):
                         " Nx, Ny または min/max の値を調整してください。"
                     )
 
+                # geometry が領域内に収まっているかチェック
+                geom_x = loaded_geometry[:, 0]
+                geom_y = loaded_geometry[:, 1]
+
+                if np.min(geom_x) < min_x or np.max(geom_x) > max_x:
+                    raise ValueError(
+                        f"geometry の x 座標が領域外です。\n"
+                        f"geometry_x_min={np.min(geom_x):.6f}, geometry_x_max={np.max(geom_x):.6f}\n"
+                        f"x_min={min_x}, x_max={max_x}"
+                    )
+
+                if np.min(geom_y) < min_y or np.max(geom_y) > max_y:
+                    raise ValueError(
+                        f"geometry の y 座標が領域外です。\n"
+                        f"geometry_y_min={np.min(geom_y):.6f}, geometry_y_max={np.max(geom_y):.6f}\n"
+                        f"y_min={min_y}, y_max={max_y}"
+                    )
+
             except Exception as ex:
                 result_text.value = f"⚠️ 入力エラー: {ex}"
                 page.update()
