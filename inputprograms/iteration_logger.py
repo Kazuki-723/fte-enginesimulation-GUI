@@ -2,6 +2,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import io, base64
+import numpy as np
 
 class IterationLogger:
     """
@@ -138,6 +139,50 @@ class IterationLogger:
         plt.tight_layout()
         buf = io.BytesIO()
         plt.savefig(buf, format="png")
+        buf.seek(0)
+
+        # base64 に変換
+        encoded = base64.b64encode(buf.read()).decode("utf-8")
+        buf.close()
+        plt.close(fig)        
+        return encoded
+
+    def plot_levelset(levelset, min_x, max_x, min_y, max_y):
+        fig, ax = plt.subplots(figsize=(5,5))
+
+        # imshow
+        im = ax.imshow(
+            levelset,
+            vmin=np.min(levelset),
+            vmax=np.max(levelset),
+            cmap="coolwarm",
+            origin="lower",
+            extent=[min_x, max_x, min_y, max_y]
+        )
+
+        # カラーバー
+        cbar = fig.colorbar(im)
+        cbar.set_label("Distance From phi = 0", fontsize=10)
+
+        # 等高線
+        levels = np.arange(0, 0.01, 2e-3)
+        ctr = ax.contour(
+            levelset,
+            levels,
+            colors="black",
+            origin="lower",
+            extent=[min_x, max_x, min_y, max_y]
+        )
+        ax.clabel(ctr, levels, inline=1)
+
+        ax.set_title("levelset result")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+
+        # PNG に変換
+        plt.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png")
         buf.seek(0)
 
         # base64 に変換

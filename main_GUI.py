@@ -906,6 +906,9 @@ def main(page: ft.Page):
         # 読み込んだgeometry表示用
         loaded_geometry_image = ft.Image(src="", visible=False, expand=True)
 
+        # levelset表示用
+        levelset_image = ft.Image(src="", visible=False, expand=True)
+
         # --- 中央列：6つの入力フィールド ---
         Nx_field    = ft.TextField(label="x方向の分割値", width=200, value = 600)
         Ny_field    = ft.TextField(label="y方向の分割値", width=200, value = 600)
@@ -970,6 +973,11 @@ def main(page: ft.Page):
             )
 
             result_text.value = "距離関数の計算が完了しました"
+
+            # 画像表示
+            levelset_image.src = IterationLogger.plot_levelset(levelset_result, min_x, max_x, min_y, max_y)
+            levelset_image.visible = True
+
             page.update()
 
 
@@ -1017,6 +1025,7 @@ def main(page: ft.Page):
                         ft.Column(
                             controls=[
                                 loaded_geometry_image,
+                                levelset_image,
                             ],
                             expand=True,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
