@@ -819,6 +819,9 @@ def main(page: ft.Page):
                     order = validate_positive_int(koch_order.value, "order（再帰回数）")
                     scale = validate_positive_float(koch_scale.value, "scale（一辺長）")
 
+                    if order >= 10:
+                        raise ValueError("再帰回数が多すぎます")
+
                     geometry = geom_make.koch_snowflake(order, scale)
 
                 else:
@@ -840,7 +843,7 @@ def main(page: ft.Page):
 
             # csvdownload用の発火点
             def on_csv_download_click(e):
-                            csv_data_url = export_csv(shape, geometry)
+                csv_data_url = export_csv(shape, geometry)
 
             geometry_csv_button.on_click = on_csv_download_click
             geometry_csv_button.visible = True
@@ -940,6 +943,16 @@ def main(page: ft.Page):
         y_max_field = ft.TextField(label="y_max", width=200, value = 0.001)
         result_text = ft.Text()
 
+        def validate_positive_int(value, name):
+            try:
+                v = int(value)
+                if v <= 0:
+                    raise ValueError(f"{name} は 0 より大きい整数(int)を入力してください")
+                return v
+            except:
+                raise ValueError(f"{name} は正の整数(int)で入力してください")
+
+
         async def pick_csv_file(_: ft.Event[ft.Button]):
                 files = await ft.FilePicker().pick_files(
                     allow_multiple=False,
@@ -974,19 +987,43 @@ def main(page: ft.Page):
             # 必要な値を取り出す
             try:
                 loaded_geometry = page.session.store.get("loaded_geometry")
-                Nx = int(Nx_field.value)
-                Ny = int(Ny_field.value)
+
+                # 型チェック + 正の値チェック
+                Nx = validate_positive_int(Nx_field.value, "Nx（x方向の分割数）")
+                Ny = validate_positive_int(Ny_field.value, "Ny（y方向の分割数）")
                 min_x = float(x_min_field.value)
                 min_y = float(y_min_field.value)
                 max_x = float(x_max_field.value)
                 max_y = float(y_max_field.value)
+
+                # min < max のチェック
+                if min_x >= max_x:
+                    raise ValueError("x_min は x_max より小さい必要があります")
+                if min_y >= max_y:
+                    raise ValueError("y_min は y_max より小さい必要があります")
+
+                # 0 が領域内に入るチェック
+                if not (min_x <= 0 <= max_x):
+                    raise ValueError("0 が x の領域内に入るようにしてください")
+                if not (min_y <= 0 <= max_y):
+                    raise ValueError("0 が y の領域内に入るようにしてください")
+
+                # Δx と Δy の一致チェック
+                dx = (max_x - min_x) / Nx
+                dy = (max_y - min_y) / Ny
+
+                if abs(dx - dy) > 1e-12:
+                    raise ValueError(
+                        f"Δx と Δy が一致しません（Δx={dx:.6f}, Δy={dy:.6f}）。"
+                        " Nx, Ny または min/max の値を調整してください。"
+                    )
 
             except Exception as ex:
                 result_text.value = f"⚠️ 入力エラー: {ex}"
                 page.update()
                 return
 
-            # ★ 実際の計算関数を呼び出す
+            # 実際の計算関数を呼び出す
             geom_calc = FuelGeometry()
             levelset_result, A_p_init, l_p_init = geom_calc.culc_initial_levelset(
                 loaded_geometry,
