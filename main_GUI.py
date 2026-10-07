@@ -682,6 +682,27 @@ def main(page: ft.Page):
             page.on_route_change = route_change()
             page.update()
 
+        # エラーのバリデーション関数
+        def validate_positive_float(value, name):
+            try:
+                v = float(value)
+                if v <= 0:
+                    raise ValueError(f"{name} は 0 より大きい値を入力してください")
+                return v
+            except:
+                raise ValueError(f"{name} は正の数値(float)で入力してください")
+
+
+        def validate_positive_int(value, name):
+            try:
+                v = int(value)
+                if v <= 0:
+                    raise ValueError(f"{name} は 0 より大きい整数(int)を入力してください")
+                return v
+            except:
+                raise ValueError(f"{name} は正の整数(int)で入力してください")
+
+
         # クラス定義
         geom_make = inputprograms.make_sample_geometry
 
@@ -774,36 +795,39 @@ def main(page: ft.Page):
 
             try:
                 if shape == "gizagiza":
-                    d = float(gizagiza_d.value)
-                    D = float(gizagiza_D.value)
-                    n = int(gizagiza_n.value)
+                    d = validate_positive_float(gizagiza_d.value, "d（内径）")
+                    D = validate_positive_float(gizagiza_D.value, "D（外径）")
+                    n = validate_positive_int(gizagiza_n.value, "n（ギザ数）")
+
+                    if d >= D:
+                        raise ValueError("内径 d は外径 D より小さい必要があります")
 
                     geometry = geom_make.make_gizagiza(d, D, n)
-                    print("end make gizagiza")
 
                 elif shape == "gear":
-                    d = float(gear_d.value)
-                    D = float(gear_D.value)
-                    ratio = float(gear_ratio.value)
-                    n = int(gear_n.value)
+                    d = validate_positive_float(gear_d.value, "d（内径）")
+                    D = validate_positive_float(gear_D.value, "D（外径）")
+                    ratio = validate_positive_float(gear_ratio.value, "ratio")
+                    n = validate_positive_int(gear_n.value, "n（ギザ数）")
+
+                    if d >= D:
+                        raise ValueError("内径 d は外径 D より小さい必要があります")
 
                     geometry = geom_make.make_gear(d, D, (1, ratio), n)
-                    print("end make gear")
 
                 elif shape == "koch":
-                    order = int(koch_order.value)
-                    scale = float(koch_scale.value)
+                    order = validate_positive_int(koch_order.value, "order（再帰回数）")
+                    scale = validate_positive_float(koch_scale.value, "scale（一辺長）")
 
                     geometry = geom_make.koch_snowflake(order, scale)
-                    print("end make kochsnow")
 
                 else:
                     result_text.value = "⚠️ 形状が選択されていません"
                     page.update()
                     return
 
-            except ValueError:
-                result_text.value = "⚠️ 数値を正しく入力してください"
+            except ValueError as err:
+                result_text.value = f"⚠️ 入力エラー: {err}"
                 page.update()
                 return
 
