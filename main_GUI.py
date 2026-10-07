@@ -8,6 +8,7 @@ import re
 from datetime import datetime
 import base64
 import numpy as np
+from io import StringIO
 
 # 物性値のMaster
 # ABSのa,nは雑
@@ -897,15 +898,66 @@ def main(page: ft.Page):
             page.on_route_change = route_change()
             page.update()
 
+        selected_file_name = ft.Text("No file selected")
+        loaded_geometry = []
+
+        # 読み込んだgeometry表示用
+        loaded_geometry_image = ft.Image(src="", visible=False, expand=True)
+
+        async def pick_csv_file(_: ft.Event[ft.Button]):
+                files = await ft.FilePicker().pick_files(
+                    allow_multiple=False,
+                    with_data=True,
+                    file_type=ft.FilePickerFileType.CUSTOM,
+                    allowed_extensions=["csv"],
+                )
+                if not files:
+                    selected_file_name.value = "Selection cancelled"
+                    return
+        
+                selected = files[0]
+                selected_file_name.value = f"Selected: {selected.name} ({selected.size} bytes)"
+                raw = (
+                    selected.bytes.decode("utf-8", errors="replace") if selected.bytes else ""
+                )
+                loaded_geometry = np.loadtxt(StringIO(raw), delimiter=",")
+
+                loaded_geometry_image.src = IterationLogger.plot_geometry(loaded_geometry)
+                loaded_geometry_image.visible = True
+
         return ft.View(
             route="/levelset_calc",
             controls=[
-                ft.Column(
-                    [
-                        ft.Text("距離関数の計算ページ（内容は後で追加）", size=24),
-                        ft.Button("戻る", on_click=goto_noncircular_geometry),
+                ft.Row(
+                    controls=[
+                        # 左側：テキスト・ボタン類
+                        ft.Column(
+                            controls=[
+                                ft.Text("levelset関数計算ページ", size=24),
+
+                                ft.Button(
+                                    content="Pick csv file",
+                                    icon=ft.Icons.UPLOAD_FILE,
+                                    on_click=pick_csv_file,
+                                ),
+
+                                selected_file_name,
+
+                                ft.Button("戻る", on_click=goto_noncircular_geometry),
+                            ],
+                            expand=True,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+
+                        # 右側：画像表示
+                        ft.Column(
+                            controls=[
+                                loaded_geometry_image,
+                            ],
+                            expand=True,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
                     ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     expand=True,
                 )
             ]
