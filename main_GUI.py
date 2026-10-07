@@ -900,8 +900,6 @@ def main(page: ft.Page):
             page.update()
 
         selected_file_name = ft.Text("No file selected")
-        loaded_geometry = []
-        levelset_result = []
 
         # 読み込んだgeometry表示用
         loaded_geometry_image = ft.Image(src="", visible=False, expand=True)
@@ -936,12 +934,13 @@ def main(page: ft.Page):
                 )
                 loaded_geometry = np.loadtxt(StringIO(raw), delimiter=",")
 
+                page.session.store.set("loaded_geometry_filename", selected.name)
                 page.session.store.set("loaded_geometry", loaded_geometry)
 
                 loaded_geometry_image.src = IterationLogger.plot_geometry(loaded_geometry)
                 loaded_geometry_image.visible = True
 
-        def run_distance_calc(e):
+        def run_distance_calc():
             # CSV が読み込まれているかチェック
             # if "loaded_geometry" not in page.session:
             #     result_text.value = "⚠️ 先に CSV を読み込んでください"
@@ -972,12 +971,58 @@ def main(page: ft.Page):
                 Nx, Ny
             )
 
+            page.session.store.set("levelset", levelset_result)
+            page.session.store.set("Nx", Nx)
+            page.session.store.set("Ny", Ny)
+            page.session.store.set("min_x", min_x)
+            page.session.store.set("min_y", min_y)
+            page.session.store.set("max_x", max_x)
+            page.session.store.set("max_y", max_y)
+
             result_text.value = "距離関数の計算が完了しました"
 
             # 画像表示
             levelset_image.src = IterationLogger.plot_levelset(levelset_result, min_x, max_x, min_y, max_y)
             levelset_image.visible = True
 
+            page.update()
+
+        def export_levelset_csv():
+            # 計算結果があるかチェック
+            # if "levelset" not in page.session:
+            #     result_text.value = "⚠️ 先に距離関数を計算してください"
+            #     page.update()
+            #     return
+
+            levelset = page.session.store.get("levelset")
+
+            geometry_filename = page.session.store.get("loaded_geometry_filename")
+
+            # 1行目：geometry のファイル名
+            header1 = geometry_filename
+
+            # 2行目：計算時の設定
+            xmin = page.session.store.get("x_min")
+            header2 = (
+                f"min_x={page.session.store.get("min_x")}, "
+                f"max_x={page.session.store.get("max_x")}, "
+                f"min_y={page.session.store.get("min_y")}, "
+                f"max_y={page.session.store.get("max_y")}, "
+                f"Nx={page.session.store.get("Nx")}, "
+                f"Ny={page.session.store.get("Ny")}"
+            )
+
+            # ファイル名
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"levelset_output_{timestamp}.csv"
+
+            # CSV 出力
+            with open(filename, "w") as f:
+                f.write(header1 + "\n")
+                f.write(header2 + "\n")
+                np.savetxt(f, levelset, fmt="%.6f", delimiter=",")
+
+            result_text.value = f"levelset を CSV 出力しました: {filename}"
             page.update()
 
 
@@ -1014,7 +1059,12 @@ def main(page: ft.Page):
                                 x_max_field,
                                 y_min_field,
                                 y_max_field,
-                                ft.Button("距離関数を計算", on_click=run_distance_calc),
+                                ft.Row(
+                                        [
+                                            ft.Button("距離関数を計算", on_click=run_distance_calc),
+                                            ft.Button("levelset CSV 出力", on_click=export_levelset_csv),
+                                        ]
+                                    ),
                                 result_text,
                             ],
                             expand=True,
