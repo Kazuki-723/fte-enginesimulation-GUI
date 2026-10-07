@@ -35,206 +35,175 @@ class FuelGeometry:
         #    A_p*=4
         return A_p
     
-    def culc_initial_levelset(self, setting_filename):
-        # settingsの読み込み
-        # print("input geometry settings file name:")
-        self.setting_filename = setting_filename    # input("> ").strip()
-        try:
-            loader = JsoncLoader(self.setting_filename)
-            settings = loader.load()
-        except Exception as e:
-            print(f"loading error: {e}")
-            exit(1)
+    def culc_initial_levelset(self, input_csv, min_x, min_y, max_x, max_y, Nx, Ny):
+        """
+        input list 
+            input_csv: flet側で読み込んだ点群のarray
+            そのほかは名前のまま(Nx,Ny:int, 他float)
+            実装の都合上，複数ファイル処理と対称性による簡易化を切って実装．
+            一応selfとかの設計はのこしているのでその時が来たら改良
+        """
 
         # 実行時間計測
         start = time.perf_counter()
-        # 境界の読み込み
-        if settings["mode"]=="levelset":
-            levelset = np.loadtxt(settings["levelset"]["filename"], delimiter=",", skiprows=1, dtype=float)
-            self.N_x = len(levelset)
-            self.N_y = len(levelset[0])
-            self.min_x = settings["levelset"]["min_x"]
-            self.max_x = settings["levelset"]["max_x"]
-            self.min_y = settings["levelset"]["min_y"]
-            self.max_y = settings["levelset"]["max_y"]
-            self.delta_x = (self.max_x - self.min_x)/self.N_x
-            self.delta_y = (self.max_y - self.min_y)/self.N_y
-            self.symmetry = settings["levelset"]["symmetry"]
-
-        if settings["mode"]=="geometry":
-            geometry_files = settings["geometry"]["geometry"]
         
-            # 計算領域の作成
-            self.min_x = settings["geometry"]["culc_area"]["min_x"]
-            self.max_x = settings["geometry"]["culc_area"]["max_x"]
-            self.N_x = settings["geometry"]["culc_area"]["N_x"]
-            self.min_y = settings["geometry"]["culc_area"]["min_y"]
-            self.max_y = settings["geometry"]["culc_area"]["max_y"]
-            self.N_y = settings["geometry"]["culc_area"]["N_y"]
-            self.delta_x = (self.max_x - self.min_x)/self.N_x
-            self.delta_y = (self.max_y - self.min_y)/self.N_y
-            levelset = np.zeros((self.N_x,self.N_y)) + (self.max_x-self.min_x)*2+(self.max_y-self.min_y)*2
-            self.symmetry = 100
+        # 計算領域の作成
+        self.min_x = min_x
+        self.max_x = max_x
+        self.N_x = Nx
+        self.min_y = min_y
+        self.max_y = max_y
+        self.N_y = Ny
+        self.delta_x = (self.max_x - self.min_x)/self.N_x
+        self.delta_y = (self.max_y - self.min_y)/self.N_y
+        levelset = np.zeros((self.N_x,self.N_y)) + (self.max_x-self.min_x)*2+(self.max_y-self.min_y)*2
+        self.symmetry = 100
 
-            for geometry_file in geometry_files:    # 穴が別ならファイルを分けているという仮定で．不便な気もする．一つのファイルで識別番号振らせるのとどっちがいいか．どっちもするべきか．
-                # print(f"culclate {geometry_file["filename"]}")
-                geometry = np.loadtxt(geometry_file["filename"], delimiter=',', dtype = float, encoding='utf-8')
+        geometry = input_csv
 
-                # この境界での計算領域のパラメータを作る．対称性を利用する計算のため．
-                min_x = self.min_x
-                max_x = self.max_x
-                N_x = self.N_x
-                min_y = self.min_y
-                max_y = self.max_y
-                N_y = self.N_y
-                # 対称性から計算領域を狭める
-                if geometry_file["symmetry"]==4:
-                    max_x = (self.max_x + self.min_x)/2
-                    N_x = int(N_x/2)
-                    max_y = (self.max_y + self.min_y)/2
-                    N_y = int(N_y/2)
-                # 全体の対称性
-                self.symmetry = min(self.symmetry, geometry_file["symmetry"])
+        # この境界での計算領域のパラメータを作る．対称性を利用する計算のため．
+        min_x = self.min_x
+        max_x = self.max_x
+        N_x = self.N_x
+        min_y = self.min_y
+        max_y = self.max_y
+        N_y = self.N_y
 
-                #---------------------
-                # levelset関数の計算
-                #---------------------
-                # Mesh生成
-                # x = np.linspace(min_x, max_x, N_x)
-                # y = np.linspace(min_y, max_y, N_y)
-                # X,Y = np.meshgrid(x,y)
-                # grid_points = np.column_stack((X.ravel(), Y.ravel()))
-                # # 境界線の読み込み，境界線上の点座標を保有
-                lines = np.array([geometry, np.append(geometry[1:],geometry[0]).reshape(len(geometry),2)]).transpose(1,0,2)  # M行2列で各要素は1行2列(M,2,2)
-                # # linesの各点とgrid_pointsの各座標の差分(x,y)を計算する
-                # v_AP = grid_points[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N^2,1,2)+(1,M,2)->(N^2,M,2)
-                # # 格子点と点の距離
-                # # 全点計算
-                # d_points = np.linalg.norm(v_AP, axis=2)
-                # # 各gridに対する最小値の計算
-                # d_points = np.min(d_points, axis=1) #(N^2,1)
+        #---------------------
+        # levelset関数の計算
+        #---------------------
+        # Mesh生成
+        # x = np.linspace(min_x, max_x, N_x)
+        # y = np.linspace(min_y, max_y, N_y)
+        # X,Y = np.meshgrid(x,y)
+        # grid_points = np.column_stack((X.ravel(), Y.ravel()))
+        # # 境界線の読み込み，境界線上の点座標を保有
+        lines = np.array([geometry, np.append(geometry[1:],geometry[0]).reshape(len(geometry),2)]).transpose(1,0,2)  # M行2列で各要素は1行2列(M,2,2)
+        # # linesの各点とgrid_pointsの各座標の差分(x,y)を計算する
+        # v_AP = grid_points[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N^2,1,2)+(1,M,2)->(N^2,M,2)
+        # # 格子点と点の距離
+        # # 全点計算
+        # d_points = np.linalg.norm(v_AP, axis=2)
+        # # 各gridに対する最小値の計算
+        # d_points = np.min(d_points, axis=1) #(N^2,1)
 
-                # KD-Treeによる近傍探査を実装
-                # phi=0 の点群を KD-tree に格納
-                tree = cKDTree(geometry)
+        # KD-Treeによる近傍探査を実装
+        # phi=0 の点群を KD-tree に格納
+        tree = cKDTree(geometry)
 
-                # Mesh生成
-                x = np.linspace(min_x, max_x, N_x)
-                y = np.linspace(min_y, max_y, N_y)
-                X, Y = np.meshgrid(x, y)
-                grid_points = np.column_stack((X.ravel(), Y.ravel()))
+        # Mesh生成
+        x = np.linspace(min_x, max_x, N_x)
+        y = np.linspace(min_y, max_y, N_y)
+        X, Y = np.meshgrid(x, y)
+        grid_points = np.column_stack((X.ravel(), Y.ravel()))
 
-                # 最近傍距離計算
-                d_points, idx = tree.query(grid_points)  # idx は最近傍点の index，使わないけど取っておく
+        # 最近傍距離計算
+        d_points, idx = tree.query(grid_points)  # idx は最近傍点の index，使わないけど取っておく
 
-                # 距離関数の値をプロット
-                # fig, ax = plt.subplots()
-                # im  = ax.imshow(d_points.reshape((N_x,N_y)), vmin=np.min(d_points), vmax=np.max(d_points))
-                # cbar = fig.colorbar(im)
-                # cbar.set_label("Distance From phi = 0", fontsize=10)
-                # plt.show()
+        # 距離関数の値をプロット
+        # fig, ax = plt.subplots()
+        # im  = ax.imshow(d_points.reshape((N_x,N_y)), vmin=np.min(d_points), vmax=np.max(d_points))
+        # cbar = fig.colorbar(im)
+        # cbar.set_label("Distance From phi = 0", fontsize=10)
+        # plt.show()
 
-                # 境界の近くのみ線分との距離も計算
-                mask_near_border = d_points < 0.001    # (N',1)
+        # 境界の近くのみ線分との距離も計算
+        mask_near_border = d_points < 0.001    # (N',1)
 
-                # 距離関数が一定以下(上のmask)のみハイライトプロット
-                # plt.figure("mask_near_border")
-                # im  = plt.imshow(mask_near_border.reshape((N_x,N_y)))
-                # plt.show()
+        # 距離関数が一定以下(上のmask)のみハイライトプロット
+        # plt.figure("mask_near_border")
+        # im  = plt.imshow(mask_near_border.reshape((N_x,N_y)))
+        # plt.show()
 
-                # Meshの近傍点より近い点を探査する
-                # linesのベクトル計算
-                # grid_points_nb = grid_points[mask_near_border]  #(N',1)
-                # v_AP = grid_points_nb[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N',1,2)+(1,M,2)->(N',M,2)
-                # v_BP = grid_points_nb[:,np.newaxis,:] - lines[:,1][np.newaxis,:,:]   # (N',M,2)
-                # v_AB = lines[:,1][np.newaxis,:,:] - lines[:,0][np.newaxis,:,:]  # (1,M,2)
+        # Meshの近傍点より近い点を探査する
+        # linesのベクトル計算
+        # grid_points_nb = grid_points[mask_near_border]  #(N',1)
+        # v_AP = grid_points_nb[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N',1,2)+(1,M,2)->(N',M,2)
+        # v_BP = grid_points_nb[:,np.newaxis,:] - lines[:,1][np.newaxis,:,:]   # (N',M,2)
+        # v_AB = lines[:,1][np.newaxis,:,:] - lines[:,0][np.newaxis,:,:]  # (1,M,2)
 
-                # # 線分の両端から格子点への角度がどちらも90°以下，つまり線分の両端より線分の方が近い場合を抽出
-                # mask = (np.sum(v_AP*v_AB,axis=2)>0)&(np.sum(v_BP*v_AB,axis=2)<0).astype(bool)  # (N',M)
+        # # 線分の両端から格子点への角度がどちらも90°以下，つまり線分の両端より線分の方が近い場合を抽出
+        # mask = (np.sum(v_AP*v_AB,axis=2)>0)&(np.sum(v_BP*v_AB,axis=2)<0).astype(bool)  # (N',M)
 
-                # # 格子点と直線の距離 d^2 = (A*x+B*y+C)**2/(A**2+B**2)   A,B,C:linesから　x,y:pointsから
-                # # 線分直線方程式 Ax + By + C = 0の係数導出
-                # param_lines = np.zeros((len(lines),3))  # (M,3)
-                # param_lines[:,0] = lines[:,0,1] - lines[:,1,1] # A=y1-y2
-                # param_lines[:,1] = lines[:,1,0] - lines[:,0,0] # B=x2-x1
-                # param_lines[:,2] = lines[:,0,0]*lines[:,1,1] - lines[:,1,0]*lines[:,0,1] # C=x1*y2-x2*y1
+        # # 格子点と直線の距離 d^2 = (A*x+B*y+C)**2/(A**2+B**2)   A,B,C:linesから　x,y:pointsから
+        # # 線分直線方程式 Ax + By + C = 0の係数導出
+        # param_lines = np.zeros((len(lines),3))  # (M,3)
+        # param_lines[:,0] = lines[:,0,1] - lines[:,1,1] # A=y1-y2
+        # param_lines[:,1] = lines[:,1,0] - lines[:,0,0] # B=x2-x1
+        # param_lines[:,2] = lines[:,0,0]*lines[:,1,1] - lines[:,1,0]*lines[:,0,1] # C=x1*y2-x2*y1
 
-                # # 直線方程式と点の距離計算　d^2 = (A*x+B*y+C)**2/(A**2+B**2)
-                # d_lines = (param_lines[:,0]*grid_points_nb[:,0][:,np.newaxis]+param_lines[:,1]*grid_points_nb[:,1][:,np.newaxis]+param_lines[:,2])**2/ \
-                # (param_lines[:,0]**2+param_lines[:,1]**2)*mask + ((max_x-min_x)*2+(max_y-min_y)*2)*~mask # (N', M)
-                
-                # # 上のsqrtをとる
-                # d_lines = np.sqrt(np.min(d_lines, axis=1))   #(N',1)
-                
-                # 境界線近傍の格子点だけ抽出
-                grid_points_nb = grid_points[mask_near_border]   # (N',2)
+        # # 直線方程式と点の距離計算　d^2 = (A*x+B*y+C)**2/(A**2+B**2)
+        # d_lines = (param_lines[:,0]*grid_points_nb[:,0][:,np.newaxis]+param_lines[:,1]*grid_points_nb[:,1][:,np.newaxis]+param_lines[:,2])**2/ \
+        # (param_lines[:,0]**2+param_lines[:,1]**2)*mask + ((max_x-min_x)*2+(max_y-min_y)*2)*~mask # (N', M)
+        
+        # # 上のsqrtをとる
+        # d_lines = np.sqrt(np.min(d_lines, axis=1))   #(N',1)
+        
+        # 境界線近傍の格子点だけ抽出
+        grid_points_nb = grid_points[mask_near_border]   # (N',2)
 
-                # --- KD-tree による最近傍端点の取得 ---
-                # 最近傍端点の index を取得
-                _, idx = tree.query(grid_points_nb)  # idx: (N',)
+        # --- KD-tree による最近傍端点の取得 ---
+        # 最近傍端点の index を取得
+        _, idx = tree.query(grid_points_nb)  # idx: (N',)
 
-                # 最近傍端点に隣接する線分候補を抽出
-                # 端点 idx は geometry の点なので、線分 lines のどちらかに属する
-                # → その端点を含む線分だけ距離計算すればよい
-                # ただし閉曲線なので idx-1 と idx の線分が候補
-                seg_idx1 = idx
-                seg_idx2 = (idx - 1) % len(lines)
+        # 最近傍端点に隣接する線分候補を抽出
+        # 端点 idx は geometry の点なので、線分 lines のどちらかに属する
+        # → その端点を含む線分だけ距離計算すればよい
+        # ただし閉曲線なので idx-1 と idx の線分が候補
+        seg_idx1 = idx
+        seg_idx2 = (idx - 1) % len(lines)
 
-                # 候補線分をまとめる（各格子点に対して2本）
-                A = np.stack((lines[seg_idx1,0], lines[seg_idx2,0]), axis=1)  # (N',2,2)
-                B = np.stack((lines[seg_idx1,1], lines[seg_idx2,1]), axis=1)  # (N',2,2)
+        # 候補線分をまとめる（各格子点に対して2本）
+        A = np.stack((lines[seg_idx1,0], lines[seg_idx2,0]), axis=1)  # (N',2,2)
+        B = np.stack((lines[seg_idx1,1], lines[seg_idx2,1]), axis=1)  # (N',2,2)
 
-                # --- 線分距離計算（既存コードと同じロジック） ---
+        # --- 線分距離計算（既存コードと同じロジック） ---
 
-                # ベクトル
-                v_AP = grid_points_nb[:,None,:] - A        # (N',2,2)
-                v_BP = grid_points_nb[:,None,:] - B        # (N',2,2)
-                v_AB = B - A                               # (N',2,2)
+        # ベクトル
+        v_AP = grid_points_nb[:,None,:] - A        # (N',2,2)
+        v_BP = grid_points_nb[:,None,:] - B        # (N',2,2)
+        v_AB = B - A                               # (N',2,2)
 
-                # 射影が線分内部にあるか判定
-                mask = (np.sum(v_AP*v_AB,axis=2)>0) & (np.sum(v_BP*v_AB,axis=2)<0)  # (N',2)
+        # 射影が線分内部にあるか判定
+        mask = (np.sum(v_AP*v_AB,axis=2)>0) & (np.sum(v_BP*v_AB,axis=2)<0)  # (N',2)
 
-                # 直線一般式の係数 A,B,C を計算
-                param_A = A[:,:,1] - B[:,:,1]   # (N',2)
-                param_B = B[:,:,0] - A[:,:,0]   # (N',2)
-                param_C = A[:,:,0]*B[:,:,1] - B[:,:,0]*A[:,:,1]  # (N',2)
+        # 直線一般式の係数 A,B,C を計算
+        param_A = A[:,:,1] - B[:,:,1]   # (N',2)
+        param_B = B[:,:,0] - A[:,:,0]   # (N',2)
+        param_C = A[:,:,0]*B[:,:,1] - B[:,:,0]*A[:,:,1]  # (N',2)
 
-                # 直線距離（平方）
-                d2 = (param_A*grid_points_nb[:,0][:,None] +
-                    param_B*grid_points_nb[:,1][:,None] +
-                    param_C)**2 / (param_A**2 + param_B**2)
+        # 直線距離（平方）
+        d2 = (param_A*grid_points_nb[:,0][:,None] +
+            param_B*grid_points_nb[:,1][:,None] +
+            param_C)**2 / (param_A**2 + param_B**2)
 
-                # mask=False の線分は巨大値にする
-                big = ((max_x-min_x)*2 + (max_y-min_y)*2)
-                d2 = d2*mask + big*(~mask)
+        # mask=False の線分は巨大値にする
+        big = ((max_x-min_x)*2 + (max_y-min_y)*2)
+        d2 = d2*mask + big*(~mask)
 
-                # 線分距離の最小値
-                d_lines = np.sqrt(np.min(d2, axis=1))  # (N',)
+        # 線分距離の最小値
+        d_lines = np.sqrt(np.min(d2, axis=1))  # (N',)
 
-                # levelset関数の更新
-                levelset_new = d_points.copy()
-                levelset_new[mask_near_border] = np.min(np.stack((d_points[mask_near_border], d_lines), axis=1), axis=1)
-                levelset_new = levelset_new.reshape((N_x,N_y))
+        # levelset関数の更新
+        levelset_new = d_points.copy()
+        levelset_new[mask_near_border] = np.min(np.stack((d_points[mask_near_border], d_lines), axis=1), axis=1)
+        levelset_new = levelset_new.reshape((N_x,N_y))
 
-                # 更新データのplot
-                # update_diff = levelset_new-d_points.reshape((N_x,N_y))
-                # fig, ax = plt.subplots()
-                # im  = ax.imshow(update_diff, vmin=np.min(update_diff), vmax=np.max(update_diff))
-                # cbar = fig.colorbar(im)
-                # cbar.set_label("(update levelset) - (old point distance)", fontsize=10)
-                # plt.show()
+        # 更新データのplot
+        # update_diff = levelset_new-d_points.reshape((N_x,N_y))
+        # fig, ax = plt.subplots()
+        # im  = ax.imshow(update_diff, vmin=np.min(update_diff), vmax=np.max(update_diff))
+        # cbar = fig.colorbar(im)
+        # cbar.set_label("(update levelset) - (old point distance)", fontsize=10)
+        # plt.show()
 
-                # 符号付の値に変換，内部が負
-                polygon = Path(geometry)
-                is_inside = polygon.contains_points(grid_points).reshape((N_x,N_y))
-                levelset_new[is_inside]*=-1
-                # 対称性
-                if geometry_file["symmetry"]==4:
-                    levelset_new = np.concatenate((levelset_new, np.fliplr(levelset_new)), 1)
-                    levelset_new = np.concatenate((levelset_new, np.flipud(levelset_new)), 0)
-                # 更新
-                update = levelset_new < levelset
-                levelset = levelset*~update + levelset_new*update
+        # 符号付の値に変換，内部が負
+        polygon = Path(geometry)
+        is_inside = polygon.contains_points(grid_points).reshape((N_x,N_y))
+        levelset_new[is_inside]*=-1
+        # 更新
+        update = levelset_new < levelset
+        levelset = levelset*~update + levelset_new*update
         # 初期ポート断面積，周長の計算
         A_p_init = self.culc_Ap(levelset) # ポート断面積計算
         l_p_init = self.culc_lp(levelset) # 周回長さ計算
@@ -254,12 +223,6 @@ class FuelGeometry:
         # ax.clabel(ctr, levels, inline=1)
         # plt.title("phi = 960 dots Nx = Ny = 600")
         # plt.show()
-
-        # 計算結果をcsvファイルに保存．（オプション）
-        if settings["output_initallevelset"] and settings["mode"]=="geometry":
-            output_filename = "init_levelset.csv" # + setting_filename.replace(".json",".csv")
-            description  =f"settings : {setting_filename}\n" + "geometry : " + ", ".join([input_geometry["filename"] for input_geometry in settings["geometry"]["geometry"]])
-            np.savetxt(output_filename, levelset, header=description, fmt='%.5f', delimiter=",")
 
         return levelset, A_p_init, l_p_init
 

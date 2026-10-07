@@ -9,6 +9,7 @@ from datetime import datetime
 import base64
 import numpy as np
 from io import StringIO
+from inputprograms.fuel_geometry import FuelGeometry
 
 # 物性値のMaster
 # ABSのa,nは雑
@@ -900,9 +901,19 @@ def main(page: ft.Page):
 
         selected_file_name = ft.Text("No file selected")
         loaded_geometry = []
+        levelset_result = []
 
         # 読み込んだgeometry表示用
         loaded_geometry_image = ft.Image(src="", visible=False, expand=True)
+
+        # --- 中央列：6つの入力フィールド ---
+        Nx_field    = ft.TextField(label="x方向の分割値", width=200, value = 600)
+        Ny_field    = ft.TextField(label="y方向の分割値", width=200, value = 600)
+        x_min_field = ft.TextField(label="x_min", width=200, value = -0.001)
+        x_max_field = ft.TextField(label="x_max", width=200, value = 0.001)
+        y_min_field = ft.TextField(label="y_min", width=200, value = -0.001)
+        y_max_field = ft.TextField(label="y_max", width=200, value = 0.001)
+        result_text = ft.Text()
 
         async def pick_csv_file(_: ft.Event[ft.Button]):
                 files = await ft.FilePicker().pick_files(
@@ -922,8 +933,45 @@ def main(page: ft.Page):
                 )
                 loaded_geometry = np.loadtxt(StringIO(raw), delimiter=",")
 
+                page.session.store.set("loaded_geometry", loaded_geometry)
+
                 loaded_geometry_image.src = IterationLogger.plot_geometry(loaded_geometry)
                 loaded_geometry_image.visible = True
+
+        def run_distance_calc(e):
+            # CSV が読み込まれているかチェック
+            # if "loaded_geometry" not in page.session:
+            #     result_text.value = "⚠️ 先に CSV を読み込んでください"
+            #     page.update()
+            #     return
+
+            # 必要な値を取り出す
+            try:
+                loaded_geometry = page.session.store.get("loaded_geometry")
+                Nx = int(Nx_field.value)
+                Ny = int(Ny_field.value)
+                min_x = float(x_min_field.value)
+                min_y = float(y_min_field.value)
+                max_x = float(x_max_field.value)
+                max_y = float(y_max_field.value)
+
+            except Exception as ex:
+                result_text.value = f"⚠️ 入力エラー: {ex}"
+                page.update()
+                return
+
+            # ★ 実際の計算関数を呼び出す
+            geom_calc = FuelGeometry()
+            levelset_result, A_p_init, l_p_init = geom_calc.culc_initial_levelset(
+                loaded_geometry,
+                min_x, min_y,
+                max_x, max_y,
+                Nx, Ny
+            )
+
+            result_text.value = "距離関数の計算が完了しました"
+            page.update()
+
 
         return ft.View(
             route="/levelset_calc",
@@ -949,6 +997,22 @@ def main(page: ft.Page):
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
 
+                        # 中央列：6つの入力フィールド
+                        ft.Column(
+                            [
+                                Nx_field,
+                                Ny_field,
+                                x_min_field,
+                                x_max_field,
+                                y_min_field,
+                                y_max_field,
+                                ft.Button("距離関数を計算", on_click=run_distance_calc),
+                                result_text,
+                            ],
+                            expand=True,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+
                         # 右側：画像表示
                         ft.Column(
                             controls=[
@@ -964,7 +1028,6 @@ def main(page: ft.Page):
         )
 
 
-    
     # ページ切り替え処理
     def route_change():
         page.views.clear()
