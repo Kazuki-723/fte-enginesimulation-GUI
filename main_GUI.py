@@ -966,10 +966,10 @@ def main(page: ft.Page):
 
         def run_distance_calc():
             # CSV が読み込まれているかチェック
-            # if "loaded_geometry" not in page.session:
-            #     result_text.value = "⚠️ 先に CSV を読み込んでください"
-            #     page.update()
-            #     return
+            if page.session.store.get("loaded_geometry") is None:
+                result_text.value = "⚠️ 先に CSV を読み込んでください"
+                page.update()
+                return
 
             # 必要な値を取り出す
             try:
@@ -1013,10 +1013,10 @@ def main(page: ft.Page):
 
         def export_levelset_csv():
             # 計算結果があるかチェック
-            # if "levelset" not in page.session:
-            #     result_text.value = "⚠️ 先に距離関数を計算してください"
-            #     page.update()
-            #     return
+            if page.session.store.get("levelset") is None:
+                result_text.value = "⚠️ 先に距離関数を計算してください"
+                page.update()
+                return
 
             levelset = page.session.store.get("levelset")
 
@@ -1026,7 +1026,6 @@ def main(page: ft.Page):
             header1 = geometry_filename
 
             # 2行目：計算時の設定
-            xmin = page.session.store.get("x_min")
             header2 = (
                 f"min_x={page.session.store.get("min_x")}, "
                 f"max_x={page.session.store.get("max_x")}, "
