@@ -1022,8 +1022,33 @@ def main(page: ft.Page):
                 f.write(header2 + "\n")
                 np.savetxt(f, levelset, fmt="%.6f", delimiter=",")
 
-            result_text.value = f"levelset を CSV 出力しました: {filename}"
+            # png出力
+            filename_png = save_levelset_png_from_base64(levelset_image.src)
+
+            result_text.value = f"levelset を CSV 出力しました: {filename}\n levelset の PNG を保存しました: {filename_png}"
+
             page.update()
+
+        def save_levelset_png_from_base64(base64_src):
+            # "data:image/png;base64,XXXX" の "XXXX" 部分だけ取り出す
+            # Flet側の保存形式の問題
+            if base64_src.startswith("data:image"):
+                base64_data = base64_src.split(",")[1]
+            else:
+                base64_data = base64_src
+
+            # decode
+            img_bytes = base64.b64decode(base64_data)
+
+            # ファイル名
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"levelset_plot_{timestamp}.png"
+
+            # 保存
+            with open(filename, "wb") as f:
+                f.write(img_bytes)
+
+            return filename
 
 
         return ft.View(
