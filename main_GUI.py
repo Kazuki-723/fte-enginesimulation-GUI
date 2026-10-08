@@ -1119,7 +1119,7 @@ def main(page: ft.Page):
 
             # ファイル名
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"levelset_plot_{timestamp}.png"
+            filename = f"imageoutput\\levelset_plot_{timestamp}.png"
 
             # 保存
             with open(filename, "wb") as f:
@@ -1633,7 +1633,7 @@ def main(page: ft.Page):
             raw = (
                 selected.bytes.decode("utf-8", errors="replace") if selected.bytes else ""
             )
-            loaded_geometry = np.loadtxt(StringIO(raw), delimiter=",")
+            loaded_geometry = np.loadtxt(StringIO(raw), delimiter=",", skiprows=2)
 
             page.session.store.set("levelset_filename", selected.name)
             page.session.store.set("levelset", loaded_geometry)
@@ -1747,7 +1747,7 @@ def main(page: ft.Page):
                 if not (min_y <= 0 <= max_y):
                     raise ValueError("0 が y の領域内に入るようにしてください")
 
-                calc_area = [[min_x,max_x],[min_y,max_y]]
+                calc_area = [[float(min_x),float(max_x)],[float(min_y),float(max_y)]]
 
             except Exception as ex:
                 evolution_output.value = f"⚠️ 入力エラー: {ex}"
@@ -1798,44 +1798,44 @@ def main(page: ft.Page):
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)
             
-            # input_params = [
-            #     ("Pc", Pc), ("OF", OF),
-            #     ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
-            #     ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
-            #     ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
-            #     ("rho_ox", rho_ox), ("rho_fuel", rho_f),
-            #     ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt),
-            #     ("Fuel Material",fuel_material)
-            # ]
+            input_params = [
+                ("Pc", Pc), ("OF", OF),
+                ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
+                ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
+                ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
+                ("rho_ox", rho_ox), ("rho_fuel", rho_f),
+                ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt),
+                ("Fuel Material",fuel_material), ("levelset file",page.session.store.get("levelset_filename"))
+            ]
 
-            # performance_params = [
-            #     ("It", It), ("Tb", tb), ("Isp", Isp) 
-            # ]
-            # def on_csv_download_click(e):
-            #     csv_data_url = get_csv_download_link(input_params, performance_params, evolution_result)
+            performance_params = [
+                ("It", It), ("Tb", tb), ("Isp", Isp) 
+            ]
+            def on_csv_download_click(e):
+                csv_data_url = get_csv_download_link(input_params, performance_params, evolution_result)
 
-            # # 結果csvのダウンロード処理
-            # csv_download_button.on_click = on_csv_download_click
-            # csv_download_button.visible = True
+            # 結果csvのダウンロード処理
+            csv_download_button.on_click = on_csv_download_click
+            csv_download_button.visible = True
 
-            # # resultのグラフ描画
-            # results_graph_image.src = sim.get_evolution_plot_base64(
-            #     time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
-            # )
-            # results_graph_image.visible = True
+            # resultのグラフ描画
+            results_graph_image.src = sim.get_evolution_plot_base64(
+                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
+            )
+            results_graph_image.visible = True
 
-            # # 画像の保存
-            # # base64 → バイナリに変換
-            # image_bytes = base64.b64decode(results_graph_image.src)
+            # 画像の保存
+            # base64 → バイナリに変換
+            image_bytes = base64.b64decode(results_graph_image.src)
 
-            # # 保存先（相対パス）
-            # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            # filename = f"imageoutput\\evo_result_graph_{timestamp}.png"
+            # 保存先（相対パス）
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"imageoutput\\evo_result_graph_{timestamp}.png"
 
-            # # PNG として保存
-            # with open(filename, "wb") as f:
-            #     f.write(image_bytes)
-            # page.update()
+            # PNG として保存
+            with open(filename, "wb") as f:
+                f.write(image_bytes)
+            page.update()
 
         run_button = ft.Button(
             "時間発展計算 ▶", on_click=on_run_simulation
