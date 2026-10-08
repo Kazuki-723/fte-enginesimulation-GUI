@@ -33,18 +33,53 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.START
     page.vertical_alignment = ft.MainAxisAlignment.START
 
+    # ============================
+    # 共通ページ遷移関数
+    # ============================
+    # 初期の形状選択画面
+    def goto_shape_select(e):
+        page.route = "/shape_select"
+        page.on_route_change = route_change()
+        page.update()
+
+    # 円形ポート計算用の初期画面
+    def goto_main(e):
+        page.route = "/main"
+        page.on_route_change = route_change()
+        page.update()
+
+    # 円形ポート計算用の時間発展画面
+    def goto_evolution(e):
+        page.route = "/evolution"
+        page.on_route_change = route_change()
+        page.update()
+
+    # geometry点群計算用の初期画面
+    def goto_noncircular(e):
+        page.route = "/noncircular"
+        page.on_route_change = route_change()
+        page.update()
+
+    # levelset関数計算画面
+    def goto_levelset_calc(e):
+        page.route = "/levelset_calc"
+        page.on_route_change = route_change()
+        page.update()
+
+    # levelsetによる初期条件計算
+    def goto_initial_condition(e):
+        page.route = "/levelset_initial_condition"
+        page.on_route_change = route_change()
+        page.update()
+    
+    # levelsetによる時間発展計算
+    def goto_evo_levelset(e):
+        page.route = "/levelset_evo_condition"
+        page.on_route_change = route_change()
+        page.update()
+
     # 形状選択ビュー
     def shape_select_view():
-        def goto_main(e):
-            page.route = "/main"
-            page.on_route_change = route_change()
-            page.update()
-
-        def goto_noncircular(e):
-            page.route = "/noncircular"
-            page.on_route_change = route_change()
-            page.update()
-
         return ft.View(
             route="/shape_select",
             controls=[
@@ -279,11 +314,6 @@ def main(page: ft.Page):
             page.update()
 
         # 実行ボタンと遷移ボタンを並べる
-
-        def goto_evolution(e):
-            page.route = "/evolution"
-            page.on_route_change = route_change()
-            page.update()
 
         action_row = ft.Row(
             [
@@ -609,11 +639,6 @@ def main(page: ft.Page):
         )
         evolution_output = ft.Text("🕒 時間発展シミュレーション")
 
-        def go_back(e):
-                    page.route = "/main"
-                    page.on_route_change = route_change()
-                    page.update()
-
         return ft.View(
             route="/evolution",
             controls=[
@@ -673,17 +698,11 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.START,
                     vertical_alignment=ft.CrossAxisAlignment.START,
                 ),
-                ft.TextButton("◀ 戻る", on_click=go_back),
+                ft.TextButton("◀ 戻る", on_click=goto_main),
             ],
         )
 
     def noncircular_geometry_view():
-        # 戻るよう
-        def goto_shape_select(e):
-            page.route = "/shape_select"
-            page.on_route_change = route_change()
-            page.update()
-
         # エラーのバリデーション関数
         def validate_positive_float(value, name):
             try:
@@ -866,11 +885,6 @@ def main(page: ft.Page):
 
             result_text.value = f"CSV を出力しました: {filename}"
             page.update()
-
-        def goto_levelset_calc(e):
-            page.route = "/levelset_calc"
-            page.on_route_change = route_change()
-            page.update()
         
         # --- 画面構成 ---
         return ft.View(
@@ -918,12 +932,6 @@ def main(page: ft.Page):
         )
 
     def levelset_calc_view():
-        # 戻るよう
-        def goto_noncircular_geometry(e):
-            page.route = "/noncircular"
-            page.on_route_change = route_change()
-            page.update()
-
         selected_file_name = ft.Text("No file selected")
 
         # 読み込んだgeometry表示用
@@ -1125,12 +1133,6 @@ def main(page: ft.Page):
 
             return filename
 
-        def goto_initial_condition(e):
-            page.route = "/levelset_initial_condition"
-            page.on_route_change = route_change()
-            page.update()
-
-
         return ft.View(
             route="/levelset_calc",
             controls=[
@@ -1149,7 +1151,7 @@ def main(page: ft.Page):
 
                                 selected_file_name,
 
-                                ft.Button("戻る", on_click=goto_noncircular_geometry),
+                                ft.Button("戻る", on_click=goto_noncircular),
                             ],
                             expand=True,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1193,11 +1195,6 @@ def main(page: ft.Page):
         )
 
     def initial_condition_view():
-        def goto_levelset_calc(e):
-            page.route = "/levelset_calc"
-            page.on_route_change = route_change()
-            page.update()
-
         inputs = {
                     "F_req": ft.TextField(label="要求推力 [N]", width=150, value=650),
                     "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150, value=2),
@@ -1498,16 +1495,10 @@ def main(page: ft.Page):
             page.update()
 
         # 実行ボタンと遷移ボタンを並べる
-
-        def goto_evolution(e):
-            page.route = "/evolution"
-            page.on_route_change = route_change()
-            page.update()
-
         action_row = ft.Row(
             [
                 ft.Button("収束計算", on_click=run_simulation),
-                ft.Button("▶ 時間発展ページへ", on_click=goto_evolution),
+                ft.Button("▶ 時間発展ページへ", on_click=goto_evo_levelset),
                 ft.Button("戻る", on_click=goto_levelset_calc),
             ]
         )
@@ -1569,6 +1560,23 @@ def main(page: ft.Page):
             ],
         )
 
+    def evo_condition_view():
+        return ft.View(
+            route="/levelset_initial_condition",
+            controls=[
+                ft.Column(
+                    [
+                        ft.Text("時間発展計算ページ（Dummy）", size=28, weight="bold"),
+                        ft.Text("ここに levelset と geometry を使った時間発展計算を追加します。"),
+
+                        ft.Button("戻る", on_click=goto_initial_condition),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                )
+            ]
+        )
+
 
     # ページ切り替え処理
     def route_change():
@@ -1591,6 +1599,9 @@ def main(page: ft.Page):
         # levelsetによる初期条件計算
         elif page.route == "/levelset_initial_condition":
             page.views.append(initial_condition_view())
+        # levelsetによる時間発展計算
+        elif page.route == "/levelset_evo_condition":
+            page.views.append(evo_condition_view())
         page.update()
 
     page.route = "/shape_select"
