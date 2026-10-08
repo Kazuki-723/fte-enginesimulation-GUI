@@ -1516,20 +1516,342 @@ def main(page: ft.Page):
         )
 
     def evo_condition_view():
-        return ft.View(
-            route="/levelset_initial_condition",
-            controls=[
-                ft.Column(
-                    [
-                        ft.Text("時間発展計算ページ（Dummy）", size=28, weight="bold"),
-                        ft.Text("ここに levelset と geometry を使った時間発展計算を追加します。"),
+        results_graph_image = ft.Image(src= "", visible=False, width=600)
 
-                        ft.Button("戻る", on_click=goto_initial_condition),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    expand=True,
-                )
+        # 初期値がある場合は値を埋める、なければ空欄
+        Pc_def        = str(page.session.store.get("Pc_def")) 
+        eta_cstar     = str(page.session.store.get("eta_cstar")) 
+        eta_nozzle    = str(page.session.store.get("eta_nozzle")) 
+        OF_def        = str(page.session.store.get("OF_def")) 
+        Pt_init       = str(page.session.store.get("Ptank_init")) 
+        rho_ox        = str(page.session.store.get("rho_ox_init")) 
+        fuel_material = str(page.session.store.get("fuel_material")) 
+
+        Kstar   = str(page.session.store.get("Kstar")) 
+        epsilon = str(page.session.store.get("epsilon")) 
+        Lf      = str(page.session.store.get("Lf")) 
+        mdot    = str(page.session.store.get("mdot")) 
+        F       = str(page.session.store.get("F")) 
+        Dt      = str(page.session.store.get("Dt")) 
+
+        # 入力欄の定義
+        Pc_box         = ft.TextField(label="燃焼室圧力 Pc [MPa]", value=Pc_def, width=150)
+        OF_box         = ft.TextField(label="初期OF比", value=OF_def, width=150)
+        eta_cstar_box  = ft.TextField(label="C*効率", value=eta_cstar, width=150)
+        eta_nozzle_box = ft.TextField(label="ノズル効率", value=eta_nozzle, width=150)
+
+        # 物性値の参照
+        materials = materials_mas
+
+        # Dropdown の options
+        def on_material_change():
+            options = []
+            for material in materials:
+                options.append(
+                    ft.DropdownOption(
+                        key = material["name"],
+                        content = ft.Text(value = material["name"]),
+                    )
+            )
+            return options
+
+        # 表示用テキスト群
+        density_text = ft.Text()
+        a_text       = ft.Text()
+        n_text       = ft.Text()
+
+        def rho_select(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
+        
+        def rho_change(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
+        # Dropdown 本体
+        material_dropdown = ft.Dropdown(
+            key = "material select",
+            options = on_material_change(),
+            value = fuel_material,
+            width = 150,
+            on_select = rho_select,
+            on_text_change = rho_change,
+        )
+
+        property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
+
+        Kstar_box   = ft.TextField(label="K*", value=Kstar, width=150)
+        epsilon_box = ft.TextField(label="膨張比 ε", value=epsilon, width=150)
+        Lf_box      = ft.TextField(label="燃焼長 Lf [m]", value=Lf, width=150)
+        mdot_box    = ft.TextField(label="推進剤流量 mdot [kg/s]", value=mdot, width=150)
+        F_box       = ft.TextField(label="初期推力F [N]", value=F, width=150)
+        Dt_box      = ft.TextField(label="スロート径 [m]", value=Dt, width=150)
+
+        # タンク容積と最終酸化剤圧力の入力欄
+        tank_volume_input      = ft.TextField(label="タンク容積 [m³]", width=150)
+        initial_pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", value=Pt_init,width=150)
+        rho_ox_input           = ft.TextField(label="初期酸化剤密度(圧力をいじる場合は調整してください．) [kg/s]", value=rho_ox,width=150)
+        final_pressure_input   = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
+        cea_input              = ft.TextField(label="CEA更新頻度", width=150)
+
+        csv_download_button = ft.Button(
+            "CSV出力 ⬇",
+            icon=ft.Icons.DOWNLOAD,
+            visible=False,
+            on_click=lambda _: None,
+        )
+
+        def get_csv_download_link(input_params, performance_params, evolution_result):
+            print("output")
+
+            # ヘッダー行（evolution_resultの列順に対応）
+            evolution_headers = [
+                "F [N]",
+                "F_fte [N]",
+                "Ptank [MPa]",
+                "Pc [MPa]",
+                "O/F [-]",
+                "mdot [kg/s]",
+                "Df [m]",
+                "C* [m/s]",
+                "CF [-]",
+                "tank mass [g]",
+                "mdot_ox [g/ms]",
+                "gamma [-]"
             ]
+
+            # 現在時刻をファイル名に付与
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"result_{timestamp}.csv"
+
+            # csv保存
+            with open(filename, "w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+                # 入力パラメータの書き出し
+                writer.writerow(["# input params."])
+                for i in range(0, len(input_params), 3):
+                    row = []
+                    for j in range(3):
+                        if i + j < len(input_params):
+                            key, val = input_params[i + j]
+                            row.extend([key, val])
+                    writer.writerow(row)
+
+
+                writer.writerow([])  # 空行
+                writer.writerow(["# performance params."])
+                for i in range(0, len(performance_params), 3):
+                    row = []
+                    for j in range(3):
+                        if i + j < len(performance_params):
+                            key, val = performance_params[i + j]
+                            row.extend([key, val])
+                    writer.writerow(row)
+
+                writer.writerow([])  # 空行
+
+                writer.writerow(["# evolution params."])
+                writer.writerow(evolution_headers)
+                writer.writerows(evolution_result)
+
+
+        # 関数に放り込む部分
+        def on_run_simulation(e):
+            try:
+                # 各入力欄から値を取得
+                Pc            = float(Pc_box.value)
+                OF            = float(OF_box.value)
+                eta_cstar     = float(eta_cstar_box.value)
+                eta_nozzle    = float(eta_nozzle_box.value)
+                Kstar         = float(Kstar_box.value)
+                epsilon       = float(epsilon_box.value)
+                Lf            = float(Lf_box.value)
+                mdot          = float(mdot_box.value)
+                V_tank        = float(tank_volume_input.value)
+                P_init        = float(initial_pressure_input.value)
+                P_final       = float(final_pressure_input.value)
+                F_init        = float(F_box.value)
+                Dt            = float(Dt_box.value)
+                rho_ox        = float(rho_ox_input.value)
+                fuel_material = material_dropdown.value
+
+                for m in materials:
+                    if m["name"] == fuel_material:
+                        props = m
+                
+                rho_f        = float(props["rho"])
+                a_ox         = float(props["a"])
+                n_ox         = float(props["n"])
+                cea_interval = float(cea_input.value)
+
+            except Exception as ex:
+                evolution_output.value = f"⚠️ 入力エラー: {ex}"
+                page.update()
+                return
+
+            try:
+                # RocketSimulation呼び出し
+                (
+                    time_ms,
+                    F_arr,
+                    F_fte_arr,
+                    OF_arr,
+                    Cstar_arr,
+                    Pc_arr,
+                    Pt_arr,
+                    evolution_result,
+                    It,
+                    tb,
+                    Isp
+                ) = sim_lev.integration_simulation(
+                    Pc            = Pc,
+                    lvlset_file   = levelset,
+                    OF            = OF,
+                    eta_cstar     = eta_cstar,
+                    eta_nozzle    = eta_nozzle,
+                    Kstar         = Kstar,
+                    epsilon       = epsilon,
+                    Lf            = Lf,
+                    mdot          = mdot,
+                    V_tank        = V_tank,
+                    P_init        = P_init,
+                    P_final       = P_final,
+                    rho_ox        = rho_ox,
+                    rho_fuel      = rho_f,
+                    a             = a_ox,
+                    n             = n_ox,
+                    fuel_material = fuel_material,
+                    F             = F_init,
+                    Dt            = Dt,
+                    culc_area     = calc_area,
+                    cea_interval  = cea_interval
+                )
+
+                # 結果表示（仮）
+                evolution_output.value = f"✅ 計算完了, Total Inpulse = {It}[Ns], 燃焼時間{tb}[sec], Isp{Isp}[s]"
+            except Exception as ex:
+                evolution_output.value = f"⚠️ 計算エラー: {ex}"
+                print(ex)
+            
+            input_params = [
+                ("Pc", Pc), ("OF", OF),
+                ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
+                ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
+                ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
+                ("rho_ox", rho_ox), ("rho_fuel", rho_f),
+                ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt),
+                ("Fuel Material",fuel_material)
+            ]
+
+            performance_params = [
+                ("It", It), ("Tb", tb), ("Isp", Isp) 
+            ]
+            def on_csv_download_click(e):
+                csv_data_url = get_csv_download_link(input_params, performance_params, evolution_result)
+
+            # 結果csvのダウンロード処理
+            csv_download_button.on_click = on_csv_download_click
+            csv_download_button.visible = True
+
+            # resultのグラフ描画
+            results_graph_image.src = sim.get_evolution_plot_base64(
+                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
+            )
+            results_graph_image.visible = True
+
+            # 画像の保存
+            # base64 → バイナリに変換
+            image_bytes = base64.b64decode(results_graph_image.src)
+
+            # 保存先（相対パス）
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"imageoutput\\evo_result_graph_{timestamp}.png"
+
+            # PNG として保存
+            with open(filename, "wb") as f:
+                f.write(image_bytes)
+            page.update()
+
+        run_button = ft.Button(
+            "時間発展計算 ▶", on_click=on_run_simulation
+        )
+        evolution_output = ft.Text("🕒 時間発展シミュレーション")
+
+        return ft.View(
+            route="/evolution",
+            controls=[
+                ft.Text("時間発展ページ", size=20, weight=ft.FontWeight.BOLD),
+                ft.Row(
+                    controls=[
+                        # 1列目
+                        ft.Column(
+                            [
+                                ft.Text("初期状態パラメータ①："),
+                                Pc_box,
+                                OF_box,
+                                eta_cstar_box,
+                                eta_nozzle_box,
+                                material_dropdown,
+                                property_column,
+                            ],
+                            spacing=10,
+                        ),
+                        # 2列目
+                        ft.Column(
+                            [
+                                ft.Text("初期状態パラメータ②："),
+                                Kstar_box,
+                                epsilon_box,
+                                Lf_box,
+                                mdot_box,
+                                F_box,
+                            ],
+                            spacing=10,
+                        ),
+                        # 3列目
+                        ft.Column(
+                            [
+                                ft.Text("初期状態パラメータ③："),
+                                Dt_box,
+                                tank_volume_input,
+                                initial_pressure_input,
+                                rho_ox_input, 
+                                final_pressure_input,
+                                cea_input,
+                            ],
+                            spacing=10,
+                        ),
+                        # ✅ 4列目：グラフ表示
+                        ft.Column(
+                            [ft.Text("時間発展グラフ："), results_graph_image],
+                            spacing=10,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                ),
+                ft.Row(
+                    controls=[run_button, csv_download_button, evolution_output],
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                ),
+                ft.TextButton("◀ 戻る", on_click=goto_initial_condition),
+            ],
         )
 
 
