@@ -78,6 +78,60 @@ def main(page: ft.Page):
         page.on_route_change = route_change()
         page.update()
 
+    # ============================
+    # 共通数値バリデーション関数
+    # ============================
+    def validate_positive_float(value, name):
+        try:
+            v = float(value)
+            if v <= 0:
+                raise ValueError(f"{name} は 0 より大きい値を入力してください")
+            return v
+        except:
+            raise ValueError(f"{name} は正の数値(float)で入力してください")
+
+
+    def validate_positive_int(value, name):
+        try:
+            v = int(value)
+            if v <= 0:
+                raise ValueError(f"{name} は 0 より大きい整数(int)を入力してください")
+            return v
+        except:
+            raise ValueError(f"{name} は正の整数(int)で入力してください")
+
+    # ============================
+    # データパース関数
+    # ============================
+    def parse_initial_results(text: str) -> dict:
+        result = {}
+        # K*
+        match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
+        if match_k:
+            result["Kstar"] = float(match_k.group(1))
+        # epsilon
+        match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
+        if match_eps:
+            result["epsilon"] = float(match_eps.group(1))
+        # Lf（燃料長さ）
+        match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
+        if match_lf:
+            result["Lf"] = float(match_lf.group(1))
+        # mdot
+        match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
+        if match_mdot:
+            result["mdot"] = float(match_mdot.group(1))
+        # 初期推力F
+        match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
+        if match_F:
+            result["F"] = float(match_F.group(1))
+        # Dt
+        match_Dt = re.search(r"計算結果Dt *= *([\d\.Ee+-]+)", text)
+        if match_Dt:
+            result["Dt"] = float(match_Dt.group(1))
+
+        return result
+
     # 形状選択ビュー
     def shape_select_view():
         return ft.View(
@@ -271,36 +325,6 @@ def main(page: ft.Page):
             page.session.store.set("Ptank_init", Ptank_init)
             page.session.store.set("rho_ox_init", rho_ox_init)
             page.session.store.set("fuel_material", fuel_material)
-
-            # resultデータのパーサー
-            def parse_initial_results(text: str) -> dict:
-                result = {}
-                # K*
-                match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
-                if match_k:
-                    result["Kstar"] = float(match_k.group(1))
-                # epsilon
-                match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
-                if match_eps:
-                    result["epsilon"] = float(match_eps.group(1))
-                # Lf（燃料長さ）
-                match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
-                if match_lf:
-                    result["Lf"] = float(match_lf.group(1))
-                # mdot
-                match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
-                if match_mdot:
-                    result["mdot"] = float(match_mdot.group(1))
-                # 初期推力F
-                match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
-                if match_F:
-                    result["F"] = float(match_F.group(1))
-                # Dt
-                match_Dt = re.search(r"計算結果Dt *= *([\d\.Ee+-]+)", text)
-                if match_Dt:
-                    result["Dt"] = float(match_Dt.group(1))
-
-                return result
 
             results_parsed = parse_initial_results(output)
 
@@ -703,26 +727,6 @@ def main(page: ft.Page):
         )
 
     def noncircular_geometry_view():
-        # エラーのバリデーション関数
-        def validate_positive_float(value, name):
-            try:
-                v = float(value)
-                if v <= 0:
-                    raise ValueError(f"{name} は 0 より大きい値を入力してください")
-                return v
-            except:
-                raise ValueError(f"{name} は正の数値(float)で入力してください")
-
-
-        def validate_positive_int(value, name):
-            try:
-                v = int(value)
-                if v <= 0:
-                    raise ValueError(f"{name} は 0 より大きい整数(int)を入力してください")
-                return v
-            except:
-                raise ValueError(f"{name} は正の整数(int)で入力してください")
-
         # dummyのgeometryとshapeを作成
         geometry = []
         shape = None
@@ -949,16 +953,6 @@ def main(page: ft.Page):
         y_max_field = ft.TextField(label="y_max", width=200, value = 0.001)
         result_text = ft.Text()
 
-        def validate_positive_int(value, name):
-            try:
-                v = int(value)
-                if v <= 0:
-                    raise ValueError(f"{name} は 0 より大きい整数(int)を入力してください")
-                return v
-            except:
-                raise ValueError(f"{name} は正の整数(int)で入力してください")
-
-
         async def pick_csv_file(_: ft.Event[ft.Button]):
                 files = await ft.FilePicker().pick_files(
                     allow_multiple=False,
@@ -1048,7 +1042,7 @@ def main(page: ft.Page):
                 return
 
             # 実際の計算関数を呼び出す
-            levelset_result, A_p_init, l_p_init = geom_calc.culc_initial_levelset(
+            levelset_result, _, _ = geom_calc.culc_initial_levelset(
                 loaded_geometry,
                 min_x, min_y,
                 max_x, max_y,
@@ -1305,15 +1299,6 @@ def main(page: ft.Page):
             page.session.store.set("loaded_geometry_filename", selected.name)
             page.session.store.set("loaded_geometry", loaded_geometry)
 
-        def validate_positive_int(value, name):
-            try:
-                v = int(value)
-                if v <= 0:
-                    raise ValueError(f"{name} は 0 より大きい整数(int)を入力してください")
-                return v
-            except:
-                raise ValueError(f"{name} は正の整数(int)で入力してください")
-
         def run_simulation(e):
             try:
                 # --- TextField から数値を取得 ---
@@ -1452,36 +1437,6 @@ def main(page: ft.Page):
             page.session.store.set("Ptank_init", Ptank_init)
             page.session.store.set("rho_ox_init", rho_ox_init)
             page.session.store.set("fuel_material", fuel_material)
-
-            # resultデータのパーサー
-            def parse_initial_results(text: str) -> dict:
-                result = {}
-                # K*
-                match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
-                if match_k:
-                    result["Kstar"] = float(match_k.group(1))
-                # epsilon
-                match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
-                if match_eps:
-                    result["epsilon"] = float(match_eps.group(1))
-                # Lf（燃料長さ）
-                match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
-                if match_lf:
-                    result["Lf"] = float(match_lf.group(1))
-                # mdot
-                match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
-                if match_mdot:
-                    result["mdot"] = float(match_mdot.group(1))
-                # 初期推力F
-                match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
-                if match_F:
-                    result["F"] = float(match_F.group(1))
-                # Dt
-                match_Dt = re.search(r"計算結果Dt *= *([\d\.Ee+-]+)", text)
-                if match_Dt:
-                    result["Dt"] = float(match_Dt.group(1))
-
-                return result
 
             results_parsed = parse_initial_results(output)
 
