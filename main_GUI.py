@@ -1609,6 +1609,35 @@ def main(page: ft.Page):
         final_pressure_input   = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
         cea_input              = ft.TextField(label="CEA更新頻度", width=150)
 
+        # calc areaとlevelsetの入力欄
+        selected_file_name = ft.Text("No file selected")
+        x_min_field = ft.TextField(label="x_min", width=200, value = -0.001)
+        x_max_field = ft.TextField(label="x_max", width=200, value = 0.001)
+        y_min_field = ft.TextField(label="y_min", width=200, value = -0.001)
+        y_max_field = ft.TextField(label="y_max", width=200, value = 0.001)
+
+
+        async def pick_csv_file(_: ft.Event[ft.Button]):
+            files = await ft.FilePicker().pick_files(
+                allow_multiple=False,
+                with_data=True,
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["csv"],
+            )
+            if not files:
+                selected_file_name.value = "Selection cancelled"
+                return
+
+            selected = files[0]
+            selected_file_name.value = f"Selected: {selected.name} ({selected.size} bytes)"
+            raw = (
+                selected.bytes.decode("utf-8", errors="replace") if selected.bytes else ""
+            )
+            loaded_geometry = np.loadtxt(StringIO(raw), delimiter=",")
+
+            page.session.store.set("levelset_filename", selected.name)
+            page.session.store.set("levelset", loaded_geometry)
+
         csv_download_button = ft.Button(
             "CSV出力 ⬇",
             icon=ft.Icons.DOWNLOAD,
@@ -1699,6 +1728,27 @@ def main(page: ft.Page):
                 n_ox         = float(props["n"])
                 cea_interval = float(cea_input.value)
 
+                levelset = page.session.store.get("levelset")
+
+                min_x = float(x_min_field.value)
+                min_y = float(y_min_field.value)
+                max_x = float(x_max_field.value)
+                max_y = float(y_max_field.value)
+
+                # min < max のチェック
+                if min_x >= max_x:
+                    raise ValueError("x_min は x_max より小さい必要があります")
+                if min_y >= max_y:
+                    raise ValueError("y_min は y_max より小さい必要があります")
+
+                # 0 が領域内に入るチェック
+                if not (min_x <= 0 <= max_x):
+                    raise ValueError("0 が x の領域内に入るようにしてください")
+                if not (min_y <= 0 <= max_y):
+                    raise ValueError("0 が y の領域内に入るようにしてください")
+
+                calc_area = [[min_x,max_x],[min_y,max_y]]
+
             except Exception as ex:
                 evolution_output.value = f"⚠️ 入力エラー: {ex}"
                 page.update()
@@ -1748,44 +1798,44 @@ def main(page: ft.Page):
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)
             
-            input_params = [
-                ("Pc", Pc), ("OF", OF),
-                ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
-                ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
-                ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
-                ("rho_ox", rho_ox), ("rho_fuel", rho_f),
-                ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt),
-                ("Fuel Material",fuel_material)
-            ]
+            # input_params = [
+            #     ("Pc", Pc), ("OF", OF),
+            #     ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
+            #     ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
+            #     ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
+            #     ("rho_ox", rho_ox), ("rho_fuel", rho_f),
+            #     ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt),
+            #     ("Fuel Material",fuel_material)
+            # ]
 
-            performance_params = [
-                ("It", It), ("Tb", tb), ("Isp", Isp) 
-            ]
-            def on_csv_download_click(e):
-                csv_data_url = get_csv_download_link(input_params, performance_params, evolution_result)
+            # performance_params = [
+            #     ("It", It), ("Tb", tb), ("Isp", Isp) 
+            # ]
+            # def on_csv_download_click(e):
+            #     csv_data_url = get_csv_download_link(input_params, performance_params, evolution_result)
 
-            # 結果csvのダウンロード処理
-            csv_download_button.on_click = on_csv_download_click
-            csv_download_button.visible = True
+            # # 結果csvのダウンロード処理
+            # csv_download_button.on_click = on_csv_download_click
+            # csv_download_button.visible = True
 
-            # resultのグラフ描画
-            results_graph_image.src = sim.get_evolution_plot_base64(
-                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
-            )
-            results_graph_image.visible = True
+            # # resultのグラフ描画
+            # results_graph_image.src = sim.get_evolution_plot_base64(
+            #     time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr
+            # )
+            # results_graph_image.visible = True
 
-            # 画像の保存
-            # base64 → バイナリに変換
-            image_bytes = base64.b64decode(results_graph_image.src)
+            # # 画像の保存
+            # # base64 → バイナリに変換
+            # image_bytes = base64.b64decode(results_graph_image.src)
 
-            # 保存先（相対パス）
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"imageoutput\\evo_result_graph_{timestamp}.png"
+            # # 保存先（相対パス）
+            # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # filename = f"imageoutput\\evo_result_graph_{timestamp}.png"
 
-            # PNG として保存
-            with open(filename, "wb") as f:
-                f.write(image_bytes)
-            page.update()
+            # # PNG として保存
+            # with open(filename, "wb") as f:
+            #     f.write(image_bytes)
+            # page.update()
 
         run_button = ft.Button(
             "時間発展計算 ▶", on_click=on_run_simulation
@@ -1836,7 +1886,23 @@ def main(page: ft.Page):
                             ],
                             spacing=10,
                         ),
-                        # ✅ 4列目：グラフ表示
+                        # 4列目
+                        ft.Column(
+                            [
+                                x_min_field,
+                                x_max_field,
+                                y_min_field,
+                                y_max_field,
+                                ft.Button(
+                                    content="Pick csv file",
+                                    icon=ft.Icons.UPLOAD_FILE,
+                                    on_click=pick_csv_file,
+                                ),
+                                selected_file_name,
+                            ],
+                            spacing=10,
+                        ),
+                        # ✅ 5列目：グラフ表示
                         ft.Column(
                             [ft.Text("時間発展グラフ："), results_graph_image],
                             spacing=10,
