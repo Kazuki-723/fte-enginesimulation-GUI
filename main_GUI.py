@@ -1661,7 +1661,8 @@ def main(page: ft.Page):
                 "CF [-]",
                 "tank mass [g]",
                 "mdot_ox [g/ms]",
-                "gamma [-]"
+                "gamma [-]",
+                "Af [m^2]"
             ]
 
             # 現在時刻をファイル名に付与
