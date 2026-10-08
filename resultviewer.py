@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # 読み込むファイルの名前を入れる
-filename = "test_lev.csv"
-df = pd.read_csv(filename, skiprows=10, header=0)
+filename = "result_20261008_145949.csv"
+df = pd.read_csv(filename, skiprows=13, header=0)
 
 columns = df.columns
 data_arrays = {col: df[col].to_numpy() for col in columns}
