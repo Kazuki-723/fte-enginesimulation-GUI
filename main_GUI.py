@@ -1,5 +1,6 @@
 import flet as ft
 import csv
+from inputprograms.rocket_simulation_levelset import RocketSimulation_levelset
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 from inputprograms.iteration_logger import IterationLogger
@@ -10,6 +11,13 @@ import base64
 import numpy as np
 from io import StringIO
 from inputprograms.fuel_geometry import FuelGeometry
+
+# クラス定義
+sim_lev   = RocketSimulation_levelset()
+sim       = RocketSimulation()
+ox_db     = OxidizerDatabase()
+geom_make = inputprograms.make_sample_geometry
+geom_calc = FuelGeometry()
 
 # 物性値のMaster
 # ABSのa,nは雑
@@ -134,9 +142,6 @@ def main(page: ft.Page):
 
         property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
 
-        # 酸化剤補完データベース
-        ox_db = OxidizerDatabase()
-
         pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", width=150)
         density_output = ft.Text(value="酸化剤密度: -", size=16)
 
@@ -189,7 +194,6 @@ def main(page: ft.Page):
 
             print("input definition done. start calculation")
 
-            sim = RocketSimulation()
             output, Dovalue, cdvalue = sim.initial_convergence(
                 F_req,
                 Pc_def,
@@ -483,8 +487,6 @@ def main(page: ft.Page):
 
 
         # 関数に放り込む部分
-        sim = RocketSimulation()
-
         def on_run_simulation(e):
             try:
                 # 各入力欄から値を取得
@@ -701,10 +703,6 @@ def main(page: ft.Page):
                 return v
             except:
                 raise ValueError(f"{name} は正の整数(int)で入力してください")
-
-
-        # クラス定義
-        geom_make = inputprograms.make_sample_geometry
 
         # dummyのgeometryとshapeを作成
         geometry = []
@@ -1042,7 +1040,6 @@ def main(page: ft.Page):
                 return
 
             # 実際の計算関数を呼び出す
-            geom_calc = FuelGeometry()
             levelset_result, A_p_init, l_p_init = geom_calc.culc_initial_levelset(
                 loaded_geometry,
                 min_x, min_y,

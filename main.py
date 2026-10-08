@@ -1,7 +1,7 @@
 import csv
-from inputprograms.rocket_simulation import RocketSimulation
+from inputprograms.rocket_simulation_levelset import RocketSimulation_levelset
 from inputprograms.importjson import JsoncLoader
-sim = RocketSimulation()
+sim = RocketSimulation_levelset()
 
 # 入力のjsonエラー判定関数
 def validate_inputs(required_keys: dict, inputvalues: dict):
