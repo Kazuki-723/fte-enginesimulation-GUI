@@ -276,7 +276,7 @@ class RocketSimulation_levelset:
         # 入力の設定
         self.Pc_tmp1       = Pc
         # self.Df = Df
-        self.levelset      = np.loadtxt(lvlset_file, delimiter=',', dtype=float, encoding='utf-8')
+        self.levelset      = lvlset_file
         self.OF_tmp1       = OF
         self.eta_cstar     = eta_cstar
         self.eta_nozzle    = eta_nozzle
@@ -446,6 +446,9 @@ class RocketSimulation_levelset:
         self.mdot_ave = np.average(self.mdot_arr)
         self.F_ave = np.average(self.F_arr)
         self.Isp = self.F_ave / (self.mdot_ave * g0)
+
+        # 燃焼時間取得
+        self.tb = self.k / 1000
 
         # print result
         print("----------RESULT----------")
