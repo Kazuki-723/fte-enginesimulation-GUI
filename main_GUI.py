@@ -1889,6 +1889,7 @@ def main(page: ft.Page):
                         # 4列目
                         ft.Column(
                             [
+                                ft.Text("初期状態パラメータ④："),
                                 x_min_field,
                                 x_max_field,
                                 y_min_field,
@@ -1919,7 +1920,6 @@ def main(page: ft.Page):
                 ft.TextButton("◀ 戻る", on_click=goto_initial_condition),
             ],
         )
-
 
     # ページ切り替え処理
     def route_change():
