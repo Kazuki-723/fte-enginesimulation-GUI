@@ -132,6 +132,67 @@ def main(page: ft.Page):
 
         return result
 
+    # ============================
+    # ヘッダー関数
+    # ============================
+    def build_header(current_route):
+
+        # 円形ルート
+        circular_flow = [
+            ("shape_select", goto_shape_select),
+            ("main", goto_main),
+            ("evolution", goto_evolution),
+        ]
+
+        # 非円形ルート
+        noncircular_flow = [
+            ("shape_select", goto_shape_select),
+            ("noncircular", goto_noncircular),
+            ("levelset", goto_levelset_calc),
+            ("initial_condition", goto_initial_condition),
+            ("evo_condition", goto_evo_levelset),
+        ]
+
+        # 現在のルートからどちらの流れか判定
+        if current_route in ["/main", "/evolution"]:
+            flow = circular_flow
+        else:
+            flow = noncircular_flow
+
+        # ボタン生成
+        nav_buttons = []
+        for name, func in flow:
+            nav_buttons.append(
+                ft.Button(
+                    name,
+                    on_click=func,
+                    style=ft.ButtonStyle(
+                        color="white" if current_route.endswith(name) else "#DDDDDD"
+                    )
+                )
+            )
+
+        # 一番右の「形状選択に戻る」
+        nav_buttons.append(
+            ft.Button(
+                "形状選択に戻る",
+                on_click=goto_shape_select,
+                style=ft.ButtonStyle(color="#FFDDDD")
+            )
+        )
+
+        # ヘッダー本体
+        return ft.Container(
+            content=ft.Row(
+                controls=nav_buttons,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            bgcolor="#333333",
+            padding=10,
+        )
+
+
+
     # 形状選択ビュー
     def shape_select_view():
         return ft.View(
@@ -374,6 +435,7 @@ def main(page: ft.Page):
         return ft.View(
             route="/main",
             controls=[
+                build_header("/main"),
                 ft.Row(
                     controls=[input_column, graph_column],
                     alignment=ft.MainAxisAlignment.START,
