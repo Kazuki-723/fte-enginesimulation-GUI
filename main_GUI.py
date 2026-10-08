@@ -1656,7 +1656,6 @@ def main(page: ft.Page):
                 "Pc [MPa]",
                 "O/F [-]",
                 "mdot [kg/s]",
-                "Df [m]",
                 "C* [m/s]",
                 "CF [-]",
                 "tank mass [g]",
