@@ -82,25 +82,33 @@ class RocketSimulation_levelset:
         return phase, rho
 
     # 初期値計算本体
-    def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, setting_filename, eta_cstar, eta_nozzle, Ptank_init, rho_ox_init, rho_f_start, a_ox, n_ox, fuel_material):
+    def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, eta_cstar, eta_nozzle, Ptank_init, 
+                            rho_ox_init, rho_f_start, a_ox, n_ox, fuel_material, loaded_geometry, geometry_setup):
         log = []
 
         # 入力パラメータの設定
-        self.F_req         = F_req * eta_cstar * eta_nozzle
-        self.Pc_def        = Pc_def
-        self.OF_def        = OF_def
-        self.mdot_new      = mdot_new
-        self.mdot_old      = mdot_new
-        # self.Df_init     = Df_init
-        self.eta_cstar     = eta_cstar
-        self.eta_nozzle    = eta_nozzle
-        self.eta           = eta_cstar * eta_nozzle
-        self.rho_ox_init   = rho_ox_init 
-        self.Ptank_init    = Ptank_init
-        self.rho_f_start   = rho_f_start
-        self.a_ox          = a_ox
-        self.n_ox          = n_ox
-        self.fuel_material = fuel_material
+        self.F_req           = F_req * eta_cstar * eta_nozzle
+        self.Pc_def          = Pc_def
+        self.OF_def          = OF_def
+        self.mdot_new        = mdot_new
+        self.mdot_old        = mdot_new
+        # self.Df_init       = Df_init
+        self.eta_cstar       = eta_cstar
+        self.eta_nozzle      = eta_nozzle
+        self.eta             = eta_cstar * eta_nozzle
+        self.rho_ox_init     = rho_ox_init 
+        self.Ptank_init      = Ptank_init
+        self.rho_f_start     = rho_f_start
+        self.a_ox            = a_ox
+        self.n_ox            = n_ox
+        self.fuel_material   = fuel_material
+        self.input_csv       = loaded_geometry
+        self.min_x           = geometry_setup["min_x"]
+        self.max_x           = geometry_setup["max_x"]
+        self.min_y           = geometry_setup["min_y"]
+        self.max_y           = geometry_setup["max_y"] 
+        self.Nx              = geometry_setup["Nx"]
+        self.Ny              = geometry_setup["Ny"]
 
         # 最適epsilon調整
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
@@ -203,7 +211,7 @@ class RocketSimulation_levelset:
         # O/F
         self.OF_tmp1 = self.mdot_ox_init / self.mdot_f_init
         # levelset関数の計算
-        _, self.A_p, self.l_p = self.geom.culc_initial_levelset(setting_filename)
+        _, self.A_p, self.l_p = self.geom.culc_initial_levelset(self.input_csv, self.min_x, self.min_y, self.max_x, self.max_y, self.Nx, self.Ny)
 
         # 定義したOFを実現するのに必要な燃焼面積
         # self.Af_req = self.mdot_f_init / (self.rho_f_start * self.a_ox * ((4 * self.mdot_ox_init) / (math.pi * self.Df_init ** 2)) ** self.n_ox)

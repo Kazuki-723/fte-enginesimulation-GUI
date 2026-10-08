@@ -1197,22 +1197,377 @@ def main(page: ft.Page):
             page.route = "/levelset_calc"
             page.on_route_change = route_change()
             page.update()
-        return ft.View(
-            route="/levelset_initial_condition",
-            controls=[
-                ft.Column(
-                    [
-                        ft.Text("初期条件計算ページ（Dummy）", size=28, weight="bold"),
-                        ft.Text("ここに levelset と geometry を使った初期条件計算を追加します。"),
 
-                        ft.Button("戻る", on_click=goto_levelset_calc),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    expand=True,
+        inputs = {
+                    "F_req": ft.TextField(label="要求推力 [N]", width=150, value=650),
+                    "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150, value=2),
+                    "OF_def": ft.TextField(label="初期O/F比", width=150, value=6.5),
+                    "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150, value=0.33),
+                    "eta_cstar": ft.TextField(label="C*効率", width=150, value=0.8),
+                    "eta_nozzle": ft.TextField(label="ノズル効率", width=150, value=1),
+                }
+
+        Nx_field    = ft.TextField(label="x方向の分割値", width=200, value = 600)
+        Ny_field    = ft.TextField(label="y方向の分割値", width=200, value = 600)
+        x_min_field = ft.TextField(label="x_min", width=200, value = -0.001)
+        x_max_field = ft.TextField(label="x_max", width=200, value = 0.001)
+        y_min_field = ft.TextField(label="y_min", width=200, value = -0.001)
+        y_max_field = ft.TextField(label="y_max", width=200, value = 0.001)
+        selected_file_name = ft.Text("No file selected")
+        
+        result_text = ft.Text()
+        graph_image = ft.Image(src = "", visible=False, width=page.width - 200)
+
+        # 物性値の参照
+        materials = materials_mas
+
+        # Dropdown の options
+        def on_material_change():
+            options = []
+            for material in materials:
+                options.append(
+                    ft.DropdownOption(
+                        key = material["name"],
+                        content = ft.Text(value = material["name"]),
+                    )
+            )
+            return options
+
+        # 表示用テキスト群
+        density_text = ft.Text()
+        a_text = ft.Text()
+        n_text = ft.Text()
+
+        def rho_select(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
+        
+        def rho_change(e):
+            # Dropdownで選択したmaterialの抽出
+            selected_material = e.data
+            #データ検索と物性値の取得
+            for m in materials:
+                if m["name"] == selected_material:
+                    selected_properties = m
+            # text出力
+            density_text.value = f"密度: {selected_properties['rho']}"
+            a_text.value       = f"a: {selected_properties['a']}"
+            n_text.value       = f"n: {selected_properties['n']}"
+        # Dropdown 本体
+        material_dropdown = ft.Dropdown(
+            key = "material select",
+            options = on_material_change(),
+            width=250,
+            on_select = rho_select,
+            on_text_change = rho_change,
+        )
+
+        property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
+
+        pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", width=150)
+        density_output = ft.Text(value="酸化剤密度: -", size=16)
+
+        def on_pressure_change(e):
+            try:
+                p = float(pressure_input.value)
+                phase, rho = ox_db.get_density(p, phase = "liquid")
+                result = f"{phase}密度: {rho:.2f} kg/m³"
+                density_output.value = result
+            except ValueError:
+                density_output.value = "⚠️ 数値で入力してください"
+            page.update()
+
+        pressure_input.on_change = on_pressure_change
+
+        async def pick_csv_file(_: ft.Event[ft.Button]):
+            files = await ft.FilePicker().pick_files(
+                allow_multiple=False,
+                with_data=True,
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["csv"],
+            )
+            if not files:
+                selected_file_name.value = "Selection cancelled"
+                return
+    
+            selected = files[0]
+            selected_file_name.value = f"Selected: {selected.name} ({selected.size} bytes)"
+            raw = (
+                selected.bytes.decode("utf-8", errors="replace") if selected.bytes else ""
+            )
+            loaded_geometry = np.loadtxt(StringIO(raw), delimiter=",")
+
+            page.session.store.set("loaded_geometry_filename", selected.name)
+            page.session.store.set("loaded_geometry", loaded_geometry)
+
+        def validate_positive_int(value, name):
+            try:
+                v = int(value)
+                if v <= 0:
+                    raise ValueError(f"{name} は 0 より大きい整数(int)を入力してください")
+                return v
+            except:
+                raise ValueError(f"{name} は正の整数(int)で入力してください")
+
+        def run_simulation(e):
+            try:
+                # --- TextField から数値を取得 ---
+                F_req      = float(inputs["F_req"].value)
+                Pc_def     = float(inputs["Pc_def"].value)
+                OF_def     = float(inputs["OF_def"].value)
+                mdot_new   = float(inputs["mdot_new"].value)
+                eta_cstar  = float(inputs["eta_cstar"].value)
+                eta_nozzle = float(inputs["eta_nozzle"].value)
+
+                # --- 酸化剤密度（density_output のテキストから抽出） ---
+                rho_ox_init = float(
+                    density_output.value.split(":")[-1].replace("kg/m³", "").strip()
                 )
+
+                # --- タンク初期圧力 ---
+                Ptank_init = float(pressure_input.value)
+
+                # --- Dropdown から材料名を取得 ---
+                fuel_material = material_dropdown.value   # "MMA" or "ABS"
+
+                # --- 材料データを取得 ---
+                for m in materials:
+                    if m["name"] == fuel_material:
+                        props = m
+                rho_f_start = float(props["rho"])
+                a_ox        = float(props["a"])
+                n_ox        = float(props["n"])
+
+                # geometryの構築
+                loaded_geometry = page.session.store.get("loaded_geometry")
+                
+                # 型チェック + 正の値チェック
+                Nx = validate_positive_int(Nx_field.value, "Nx（x方向の分割数）")
+                Ny = validate_positive_int(Ny_field.value, "Ny（y方向の分割数）")
+                min_x = float(x_min_field.value)
+                min_y = float(y_min_field.value)
+                max_x = float(x_max_field.value)
+                max_y = float(y_max_field.value)
+
+                # min < max のチェック
+                if min_x >= max_x:
+                    raise ValueError("x_min は x_max より小さい必要があります")
+                if min_y >= max_y:
+                    raise ValueError("y_min は y_max より小さい必要があります")
+
+                # 0 が領域内に入るチェック
+                if not (min_x <= 0 <= max_x):
+                    raise ValueError("0 が x の領域内に入るようにしてください")
+                if not (min_y <= 0 <= max_y):
+                    raise ValueError("0 が y の領域内に入るようにしてください")
+
+                # Δx と Δy の一致チェック
+                dx = (max_x - min_x) / Nx
+                dy = (max_y - min_y) / Ny
+
+                if abs(dx - dy) > 1e-12:
+                    raise ValueError(
+                        f"Δx と Δy が一致しません（Δx={dx:.6f}, Δy={dy:.6f}）。"
+                        " Nx, Ny または min/max の値を調整してください。"
+                    )
+
+                # geometry が領域内に収まっているかチェック
+                geom_x = loaded_geometry[:, 0]
+                geom_y = loaded_geometry[:, 1]
+
+                if np.min(geom_x) < min_x or np.max(geom_x) > max_x:
+                    raise ValueError(
+                        f"geometry の x 座標が領域外です。\n"
+                        f"geometry_x_min={np.min(geom_x):.6f}, geometry_x_max={np.max(geom_x):.6f}\n"
+                        f"x_min={min_x}, x_max={max_x}"
+                    )
+
+                if np.min(geom_y) < min_y or np.max(geom_y) > max_y:
+                    raise ValueError(
+                        f"geometry の y 座標が領域外です。\n"
+                        f"geometry_y_min={np.min(geom_y):.6f}, geometry_y_max={np.max(geom_y):.6f}\n"
+                        f"y_min={min_y}, y_max={max_y}"
+                    )
+
+                geometry_setup = {
+                    "min_x": min_x,
+                    "min_y": min_y,
+                    "max_x": max_x, 
+                    "max_y": max_y,
+                    "Nx": Nx,
+                    "Ny": Ny,
+                }
+
+            except Exception as ex:
+                result_text.value = f"⚠️ 入力エラー: {ex}"
+                page.update()
+                return
+
+            print("input definition done. start calculation")
+
+            output, Dovalue, cdvalue = sim_lev.initial_convergence(
+                F_req,
+                Pc_def,
+                OF_def,
+                mdot_new,
+                eta_cstar,
+                eta_nozzle,
+                Ptank_init,
+                rho_ox_init,
+                rho_f_start,
+                a_ox,
+                n_ox,
+                fuel_material,
+                loaded_geometry,
+                geometry_setup
+            )
+            # --- 結果表示 ---
+            result_text.value = output
+
+            # グラフ画像の取得
+            graph_image.src = sim_lev.get_iteration_plot_base64(Dovalue, cdvalue)
+            graph_image.visible = True
+
+            # 画像の保存
+            # base64 → バイナリに変換
+            image_bytes = base64.b64decode(graph_image.src)
+
+            # 保存先（相対パス）
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"imageoutput\\init_result_graph_{timestamp}.png"
+
+            # PNG として保存
+            with open(filename, "wb") as f:
+                f.write(image_bytes)
+
+            page.session.store.set("Pc_def", Pc_def)
+            page.session.store.set("eta_cstar", eta_cstar)
+            page.session.store.set("eta_nozzle", eta_nozzle)
+            page.session.store.set("OF_def", OF_def)
+            page.session.store.set("Ptank_init", Ptank_init)
+            page.session.store.set("rho_ox_init", rho_ox_init)
+            page.session.store.set("fuel_material", fuel_material)
+
+            # resultデータのパーサー
+            def parse_initial_results(text: str) -> dict:
+                result = {}
+                # K*
+                match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
+                if match_k:
+                    result["Kstar"] = float(match_k.group(1))
+                # epsilon
+                match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
+                if match_eps:
+                    result["epsilon"] = float(match_eps.group(1))
+                # Lf（燃料長さ）
+                match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
+                if match_lf:
+                    result["Lf"] = float(match_lf.group(1))
+                # mdot
+                match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
+                if match_mdot:
+                    result["mdot"] = float(match_mdot.group(1))
+                # 初期推力F
+                match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
+                if match_F:
+                    result["F"] = float(match_F.group(1))
+                # Dt
+                match_Dt = re.search(r"計算結果Dt *= *([\d\.Ee+-]+)", text)
+                if match_Dt:
+                    result["Dt"] = float(match_Dt.group(1))
+
+                return result
+
+            results_parsed = parse_initial_results(output)
+
+            page.session.store.set("Kstar", results_parsed["Kstar"])
+            page.session.store.set("epsilon", results_parsed["epsilon"])
+            page.session.store.set("Lf", results_parsed["Lf"])
+            page.session.store.set("mdot", results_parsed["mdot"])
+            page.session.store.set("F", results_parsed["F"])
+            page.session.store.set("Dt", results_parsed["Dt"])
+            
+            page.update()
+
+        # 実行ボタンと遷移ボタンを並べる
+
+        def goto_evolution(e):
+            page.route = "/evolution"
+            page.on_route_change = route_change()
+            page.update()
+
+        action_row = ft.Row(
+            [
+                ft.Button("収束計算", on_click=run_simulation),
+                ft.Button("▶ 時間発展ページへ", on_click=goto_evolution),
+                ft.Button("戻る", on_click=goto_levelset_calc),
             ]
         )
 
+        # 左側：入力群＋結果＋ボタン群＋ログ
+        input_column = ft.Column(
+            controls=[*list(inputs.values()),
+                    pressure_input,
+                    density_output,
+                    material_dropdown,
+                    property_column,
+                    action_row, 
+                    result_text],
+            spacing=10,
+            expand=True,
+            height=page.height + 100,
+            scroll=ft.ScrollMode.AUTO,
+        )
+
+        # 中央：geometryのsetup
+        geometry_column = ft.Column(
+            [
+                Nx_field,
+                Ny_field,
+                x_min_field,
+                x_max_field,
+                y_min_field,
+                y_max_field,
+                ft.Button(
+                    content="Pick csv file",
+                    icon=ft.Icons.UPLOAD_FILE,
+                    on_click=pick_csv_file,
+                ),
+
+                selected_file_name,
+            ],
+            expand=True,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+        # 右側：収束グラフと K* グラフを縦に並べる
+        graph_column = ft.Column(
+            controls=[graph_image],
+            spacing=10,
+            expand=True,
+            height=page.height + 100,
+            scroll=ft.ScrollMode.AUTO,
+            alignment=ft.MainAxisAlignment.START,
+        )
+
+        return ft.View(
+            route="/main",
+            controls=[
+                ft.Row(
+                    controls=[input_column,  geometry_column, graph_column],
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                )
+            ],
+        )
 
 
     # ページ切り替え処理
