@@ -30,7 +30,7 @@ def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"
     page.scroll = ft.ScrollMode.AUTO
 
-    page.horizontal_alignment = ft.CrossAxisAlignment.START
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.MainAxisAlignment.START
 
     # ============================
@@ -2085,6 +2085,7 @@ def main(page: ft.Page):
                                 ),
                                 selected_file_name,
                             ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             spacing=10,
                         ),
                         # ✅ 5列目：グラフ表示
