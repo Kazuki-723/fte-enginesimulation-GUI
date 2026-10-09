@@ -1039,7 +1039,8 @@ def main(page: ft.Page):
                                                         ),
                                                     ),
                                                 geometry_csv_button,
-                                            ]
+                                            ],
+                                            alignment=ft.MainAxisAlignment.CENTER,
                                         ),
                                         result_text,
                                     ],
@@ -1293,26 +1294,27 @@ def main(page: ft.Page):
                                 ft.Row(
                                         [
                                             ft.Button(
-                                                    "距離関数を計算", 
-                                                    on_click=run_distance_calc,
-                                                    bgcolor="#415FA0",
-                                                    color="#C0CAF5",
-                                                    style=ft.ButtonStyle(
-                                                        overlay_color="#2D3F64",
-                                                        shadow_color="#000000",
-                                                    ),
+                                                "距離関数を計算", 
+                                                on_click=run_distance_calc,
+                                                bgcolor="#415FA0",
+                                                color="#C0CAF5",
+                                                style=ft.ButtonStyle(
+                                                    overlay_color="#2D3F64",
+                                                    shadow_color="#000000",
                                                 ),
+                                            ),
                                             ft.Button(
-                                                    "levelset CSV 出力", 
-                                                    on_click=export_levelset_csv,
-                                                    bgcolor="#48865D",
-                                                    color="#C0CAF5",
-                                                    style=ft.ButtonStyle(
-                                                        overlay_color="#2F533B",
-                                                        shadow_color="#000000",
-                                                    ),
+                                                "levelset CSV 出力", 
+                                                on_click=export_levelset_csv,
+                                                bgcolor="#48865D",
+                                                color="#C0CAF5",
+                                                style=ft.ButtonStyle(
+                                                    overlay_color="#2F533B",
+                                                    shadow_color="#000000",
                                                 ),
-                                        ]
+                                            ),
+                                        ],
+                                        alignment=ft.MainAxisAlignment.CENTER,
                                     ),
                                 result_text,
                             ],
@@ -1609,7 +1611,8 @@ def main(page: ft.Page):
                             shadow_color="#000000",
                         ),
                     ),
-            ]
+            ],
+            alignment=ft.MainAxisAlignment.START,
         )
 
         # 左側：入力群＋結果＋ボタン群＋ログ
@@ -1670,7 +1673,7 @@ def main(page: ft.Page):
                 build_header("/levelset_initial_condition"),
                 ft.Row(
                     controls=[input_column,  geometry_column, graph_column],
-                    alignment=ft.MainAxisAlignment.START,
+                    alignment=ft.MainAxisAlignment.CENTER,
                     vertical_alignment=ft.CrossAxisAlignment.START,
                 )
             ],
