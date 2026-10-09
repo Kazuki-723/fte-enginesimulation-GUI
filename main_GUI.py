@@ -225,11 +225,23 @@ def main(page: ft.Page):
                             [
                                 ft.Button(
                                     "円形ポート",
-                                    on_click=goto_main
+                                    on_click=goto_main,
+                                    bgcolor="#415FA0",
+                                    color="#C0CAF5",
+                                    style=ft.ButtonStyle(
+                                        overlay_color="#2D3F64",
+                                        shadow_color="#000000",
+                                    ),
                                 ),
                                 ft.Button(
                                     "円形以外のポート",
-                                    on_click=goto_noncircular
+                                    on_click=goto_noncircular,
+                                    bgcolor="#415FA0",
+                                    color="#C0CAF5",
+                                    style=ft.ButtonStyle(
+                                        overlay_color="#2D3F64",
+                                        shadow_color="#000000",
+                                    ),
                                 ),
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
@@ -421,7 +433,16 @@ def main(page: ft.Page):
 
         action_row = ft.Row(
             [
-                ft.Button("収束計算", on_click=run_simulation),
+                ft.Button(
+                    "収束計算", 
+                    on_click=run_simulation,
+                    bgcolor="#415FA0",
+                    color="#C0CAF5",
+                    style=ft.ButtonStyle(
+                        overlay_color="#2D3F64",
+                        shadow_color="#000000",
+                    ),
+                ),
             ]
         )
 
@@ -564,6 +585,12 @@ def main(page: ft.Page):
             icon=ft.Icons.DOWNLOAD,
             visible=False,
             on_click=lambda _: None,
+            bgcolor="#48865D",
+            color="#C0CAF5",
+            style=ft.ButtonStyle(
+                overlay_color="#2F533B",
+                shadow_color="#000000",
+            ),
         )
 
         def get_csv_download_link(input_params, performance_params, evolution_result):
@@ -739,7 +766,14 @@ def main(page: ft.Page):
             page.update()
 
         run_button = ft.Button(
-            "時間発展計算 ▶", on_click=on_run_simulation
+            "時間発展計算 ▶", 
+            on_click=on_run_simulation,
+            bgcolor="#415FA0",
+            color="#C0CAF5",
+            style=ft.ButtonStyle(
+                overlay_color="#2D3F64",
+                shadow_color="#000000",
+            ),
         )
         evolution_output = ft.Text("🕒 時間発展シミュレーション")
 
@@ -857,7 +891,16 @@ def main(page: ft.Page):
             ]
         )
 
-        geometry_csv_button = ft.Button("CSV 出力", visible=False, on_click=lambda _: None,)
+        geometry_csv_button = ft.Button("CSV 出力", 
+                                            visible=False, 
+                                            on_click=lambda _: None,
+                                            bgcolor="#48865D",
+                                            color="#C0CAF5",
+                                            style=ft.ButtonStyle(
+                                                overlay_color="#2F533B",
+                                                shadow_color="#000000",
+                                            ),
+                                        )
 
         # --- Dropdown 選択時の動作 ---
         def on_shape_change(e):
@@ -985,7 +1028,16 @@ def main(page: ft.Page):
                                         form_container,
                                         ft.Row(
                                             controls=[
-                                                ft.Button("ジオメトリ生成", on_click=generate_geometry),
+                                                ft.Button(
+                                                        "ジオメトリ生成", 
+                                                        on_click=generate_geometry,
+                                                        bgcolor="#415FA0",
+                                                        color="#C0CAF5",
+                                                        style=ft.ButtonStyle(
+                                                            overlay_color="#2D3F64",
+                                                            shadow_color="#000000",
+                                                        ),
+                                                    ),
                                                 geometry_csv_button,
                                             ]
                                         ),
@@ -1216,6 +1268,12 @@ def main(page: ft.Page):
                                     content="Pick csv file",
                                     icon=ft.Icons.UPLOAD_FILE,
                                     on_click=pick_csv_file,
+                                    bgcolor="#415FA0",
+                                    color="#C0CAF5",
+                                    style=ft.ButtonStyle(
+                                        overlay_color="#2D3F64",
+                                        shadow_color="#000000",
+                                    ),
                                 ),
                                 selected_file_name,
                             ],
@@ -1234,8 +1292,26 @@ def main(page: ft.Page):
                                 y_max_field,
                                 ft.Row(
                                         [
-                                            ft.Button("距離関数を計算", on_click=run_distance_calc),
-                                            ft.Button("levelset CSV 出力", on_click=export_levelset_csv),
+                                            ft.Button(
+                                                    "距離関数を計算", 
+                                                    on_click=run_distance_calc,
+                                                    bgcolor="#415FA0",
+                                                    color="#C0CAF5",
+                                                    style=ft.ButtonStyle(
+                                                        overlay_color="#2D3F64",
+                                                        shadow_color="#000000",
+                                                    ),
+                                                ),
+                                            ft.Button(
+                                                    "levelset CSV 出力", 
+                                                    on_click=export_levelset_csv,
+                                                    bgcolor="#48865D",
+                                                    color="#C0CAF5",
+                                                    style=ft.ButtonStyle(
+                                                        overlay_color="#2F533B",
+                                                        shadow_color="#000000",
+                                                    ),
+                                                ),
                                         ]
                                     ),
                                 result_text,
@@ -1523,7 +1599,16 @@ def main(page: ft.Page):
         # 実行ボタンと遷移ボタンを並べる
         action_row = ft.Row(
             [
-                ft.Button("収束計算", on_click=run_simulation),
+                ft.Button(
+                        "収束計算", 
+                        on_click=run_simulation,
+                        bgcolor="#415FA0",
+                        color="#C0CAF5",
+                        style=ft.ButtonStyle(
+                            overlay_color="#2D3F64",
+                            shadow_color="#000000",
+                        ),
+                    ),
             ]
         )
 
@@ -1555,6 +1640,12 @@ def main(page: ft.Page):
                     content="Pick csv file",
                     icon=ft.Icons.UPLOAD_FILE,
                     on_click=pick_csv_file,
+                    bgcolor="#415FA0",
+                    color="#C0CAF5",
+                    style=ft.ButtonStyle(
+                        overlay_color="#2D3F64",
+                        shadow_color="#000000",
+                    ),
                 ),
 
                 selected_file_name,
@@ -1713,6 +1804,12 @@ def main(page: ft.Page):
             icon=ft.Icons.DOWNLOAD,
             visible=False,
             on_click=lambda _: None,
+            bgcolor="#48865D",
+            color="#C0CAF5",
+            style=ft.ButtonStyle(
+                overlay_color="#2F533B",
+                shadow_color="#000000",
+            ),
         )
 
         def get_csv_download_link(input_params, performance_params, evolution_result):
@@ -1908,7 +2005,14 @@ def main(page: ft.Page):
             page.update()
 
         run_button = ft.Button(
-            "時間発展計算 ▶", on_click=on_run_simulation
+            "時間発展計算 ▶", 
+            on_click=on_run_simulation,
+            bgcolor="#415FA0",
+            color="#C0CAF5",
+            style=ft.ButtonStyle(
+                overlay_color="#2D3F64",
+                shadow_color="#000000",
+            ),
         )
         evolution_output = ft.Text("🕒 時間発展シミュレーション")
 
@@ -1969,6 +2073,12 @@ def main(page: ft.Page):
                                     content="Pick csv file",
                                     icon=ft.Icons.UPLOAD_FILE,
                                     on_click=pick_csv_file,
+                                    bgcolor="#415FA0",
+                                    color="#C0CAF5",
+                                    style=ft.ButtonStyle(
+                                        overlay_color="#2D3F64",
+                                        shadow_color="#000000",
+                                    ),
                                 ),
                                 selected_file_name,
                             ],
