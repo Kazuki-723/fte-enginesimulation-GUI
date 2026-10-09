@@ -138,60 +138,79 @@ def main(page: ft.Page):
     def build_header(current_route):
 
         # 円形ルート
-        circular_flow = [
-            ("shape_select", goto_shape_select),
-            ("main", goto_main),
-            ("evolution", goto_evolution),
+        circular_steps = [
+            ("形状選択", "/shape_select", goto_shape_select),
+            ("円形初期設定", "/main", goto_main),
+            ("円形時間発展", "/evolution", goto_evolution),
         ]
 
         # 非円形ルート
-        noncircular_flow = [
-            ("shape_select", goto_shape_select),
-            ("noncircular", goto_noncircular),
-            ("levelset", goto_levelset_calc),
-            ("initial_condition", goto_initial_condition),
-            ("evo_condition", goto_evo_levelset),
+        noncircular_steps = [
+            ("形状選択", "/shape_select", goto_shape_select),
+            ("非円形geometry", "/noncircular", goto_noncircular),
+            ("levelset計算", "/levelset_calc", goto_levelset_calc),
+            ("初期条件計算", "/levelset_initial_condition", goto_initial_condition),
+            ("時間発展", "/levelset_evo_condition", goto_evo_levelset),
         ]
 
-        # 現在のルートからどちらの流れか判定
+        # ルート判定
         if current_route in ["/main", "/evolution"]:
-            flow = circular_flow
+            steps = circular_steps
         else:
-            flow = noncircular_flow
+            steps = noncircular_steps
 
-        # ボタン生成
-        nav_buttons = []
-        for name, func in flow:
-            nav_buttons.append(
-                ft.Button(
-                    name,
+        # ステップバーの各要素を作成
+        step_controls = []
+        for label, route, func in steps:
+
+            # 状態判定
+            if current_route == route:
+                # 現在のステップ
+                icon = ft.Icon(ft.Icons.RADIO_BUTTON_CHECKED, color="#4A90E2")
+                text_color = "#64B5F6"
+            else:
+                # 未完了ステップ
+                icon = ft.Icon(ft.Icons.RADIO_BUTTON_UNCHECKED, color="#CCCCCC")
+                text_color = "#CCCCCC"
+
+            step_controls.append(
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            icon,
+                            ft.Text(label, color=text_color, size=16),
+                        ],
+                        spacing=5,
+                    ),
+                    padding=10,
                     on_click=func,
-                    style=ft.ButtonStyle(
-                        color="white" if current_route.endswith(name) else "#DDDDDD"
-                    )
                 )
             )
 
         # 一番右の「形状選択に戻る」
-        nav_buttons.append(
-            ft.Button(
-                "形状選択に戻る",
+        step_controls.append(
+            ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.RESTART_ALT, color="#FF8888"),
+                        ft.Text("最初に戻る", color="#FF8888", size=16),
+                    ],
+                    spacing=5,
+                ),
+                padding=10,
                 on_click=goto_shape_select,
-                style=ft.ButtonStyle(color="#FFDDDD")
             )
         )
 
-        # ヘッダー本体
+        # ステップバー本体
         return ft.Container(
             content=ft.Row(
-                controls=nav_buttons,
+                controls=step_controls,
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
-            bgcolor="#333333",
+            bgcolor="#1E1E1E",
             padding=10,
         )
-
-
 
     # 形状選択ビュー
     def shape_select_view():
@@ -728,6 +747,7 @@ def main(page: ft.Page):
         return ft.View(
             route="/evolution",
             controls=[
+                build_header("/evolution"),
                 ft.Text("時間発展ページ", size=20, weight=ft.FontWeight.BOLD),
                 ft.Row(
                     controls=[
@@ -956,46 +976,46 @@ def main(page: ft.Page):
         return ft.View(
             route="/noncircular",
             controls=[
-    ft.Row(
-        controls=[
-            # 左側：入力フォーム
-            ft.Column(
-                        [
-                            ft.Text("非円形ポート形状の入力", size=24, weight="bold"),
-                            shape_dropdown,
-                            form_container,
-                            ft.Row(
-                                controls=[
-                                    ft.Button("ジオメトリ生成", on_click=generate_geometry),
-                                    geometry_csv_button,
-                                ]
-                            ),
-                            result_text,
-                            ft.Row(
-                                controls=[
-                                ft.Button("戻る", on_click=goto_shape_select),
-                                ft.Button("距離関数の計算", on_click=goto_levelset_calc),
-                                ]
-                            ),
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        expand=True,
-                    ),
+                build_header("/noncircular"),
+                ft.Row(
+                    controls=[
+                        # 左側：入力フォーム
+                        ft.Column(
+                                    [
+                                        ft.Text("非円形ポート形状の入力", size=24, weight="bold"),
+                                        shape_dropdown,
+                                        form_container,
+                                        ft.Row(
+                                            controls=[
+                                                ft.Button("ジオメトリ生成", on_click=generate_geometry),
+                                                geometry_csv_button,
+                                            ]
+                                        ),
+                                        result_text,
+                                        ft.Row(
+                                            controls=[
+                                            ft.Button("戻る", on_click=goto_shape_select),
+                                            ft.Button("距離関数の計算", on_click=goto_levelset_calc),
+                                            ]
+                                        ),
+                                    ],
+                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                    expand=True,
+                                ),
 
-                    # 右側：画像表示
-                    ft.Column(
-                        [
-                            geometry_image,
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        expand=True,
-                    ),
-                ],
-                expand=True,
-            )
-        ]
-
-        )
+                                # 右側：画像表示
+                                ft.Column(
+                                    [
+                                        geometry_image,
+                                    ],
+                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                    expand=True,
+                                ),
+                            ],
+                            expand=True,
+                        )
+                    ]
+                )
 
     def levelset_calc_view():
         selected_file_name = ft.Text("No file selected")
@@ -1192,6 +1212,7 @@ def main(page: ft.Page):
         return ft.View(
             route="/levelset_calc",
             controls=[
+                build_header("/levelset_calc"),
                 ft.Row(
                     controls=[
                         # 左側：テキスト・ボタン類
@@ -1567,8 +1588,9 @@ def main(page: ft.Page):
         )
 
         return ft.View(
-            route="/main",
+            route="/levelset_initial_condition",
             controls=[
+                build_header("/levelset_initial_condition"),
                 ft.Row(
                     controls=[input_column,  geometry_column, graph_column],
                     alignment=ft.MainAxisAlignment.START,
@@ -1905,8 +1927,9 @@ def main(page: ft.Page):
         evolution_output = ft.Text("🕒 時間発展シミュレーション")
 
         return ft.View(
-            route="/evolution",
+            route="/levelset_evo_condition",
             controls=[
+                build_header("/levelset_evo_condition"),
                 ft.Text("時間発展ページ", size=20, weight=ft.FontWeight.BOLD),
                 ft.Row(
                     controls=[
