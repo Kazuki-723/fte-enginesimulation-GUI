@@ -422,7 +422,6 @@ def main(page: ft.Page):
         action_row = ft.Row(
             [
                 ft.Button("収束計算", on_click=run_simulation),
-                ft.Button("▶ 時間発展ページへ", on_click=goto_evolution)
             ]
         )
 
@@ -804,7 +803,6 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.START,
                     vertical_alignment=ft.CrossAxisAlignment.START,
                 ),
-                ft.TextButton("◀ 戻る", on_click=goto_main),
             ],
         )
 
@@ -992,12 +990,6 @@ def main(page: ft.Page):
                                             ]
                                         ),
                                         result_text,
-                                        ft.Row(
-                                            controls=[
-                                            ft.Button("戻る", on_click=goto_shape_select),
-                                            ft.Button("距離関数の計算", on_click=goto_levelset_calc),
-                                            ]
-                                        ),
                                     ],
                                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                     expand=True,
@@ -1225,10 +1217,7 @@ def main(page: ft.Page):
                                     icon=ft.Icons.UPLOAD_FILE,
                                     on_click=pick_csv_file,
                                 ),
-
                                 selected_file_name,
-
-                                ft.Button("戻る", on_click=goto_noncircular),
                             ],
                             expand=True,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1250,7 +1239,6 @@ def main(page: ft.Page):
                                         ]
                                     ),
                                 result_text,
-                                ft.Button("初期条件ページへ", on_click=goto_initial_condition),
                             ],
                             expand=True,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1536,8 +1524,6 @@ def main(page: ft.Page):
         action_row = ft.Row(
             [
                 ft.Button("収束計算", on_click=run_simulation),
-                ft.Button("▶ 時間発展ページへ", on_click=goto_evo_levelset),
-                ft.Button("戻る", on_click=goto_levelset_calc),
             ]
         )
 
@@ -2002,7 +1988,6 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.START,
                     vertical_alignment=ft.CrossAxisAlignment.START,
                 ),
-                ft.TextButton("◀ 戻る", on_click=goto_initial_condition),
             ],
         )
 
